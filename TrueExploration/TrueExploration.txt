@@ -1,0 +1,31 @@
+## Title: TrueExploration
+## APIVersion: 100020 100019
+## Version: 1.4.2
+## Author: Shinni
+## SavedVariables: TE_SavedVars
+## OptionalDependsOn: LibAddonMenu-2.0
+## OptionalDependsOn: AUI
+
+libs\LibStub\LibStub.lua
+libs\LibMapPing\LibMapPing.lua
+libs\LibGPS\LibGPS.lua
+libs\LibAddonMenu-2.0\LibAddonMenu-2.0.lua
+libs\LibAddonMenu-2.0\controls\panel.lua
+libs\LibAddonMenu-2.0\controls\submenu.lua
+libs\LibAddonMenu-2.0\controls\button.lua
+libs\LibAddonMenu-2.0\controls\checkbox.lua
+libs\LibAddonMenu-2.0\controls\colorpicker.lua
+libs\LibAddonMenu-2.0\controls\custom.lua
+libs\LibAddonMenu-2.0\controls\description.lua
+libs\LibAddonMenu-2.0\controls\dropdown.lua
+libs\LibAddonMenu-2.0\controls\editbox.lua
+libs\LibAddonMenu-2.0\controls\header.lua
+libs\LibAddonMenu-2.0\controls\slider.lua
+libs\LibAddonMenu-2.0\controls\texture.lua
+
+language\en.lua
+language\$(language).lua
+
+TrueExploration.lua
+TrueExplorationOptions.lua
+TrueExploration.xml
