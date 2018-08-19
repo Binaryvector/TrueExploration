@@ -623,11 +623,8 @@ function TrueExplor.OnAddonLoaded( _, addon )
 	
 	-- there is a short blending animation, which resets the alpha values for the texture's vertices
 	-- so let the worldmap appear instantly instead
-	WORLD_MAP_SCENE:RemoveFragment(WORLD_MAP_FRAGMENT)
-	GAMEPAD_WORLD_MAP_SCENE:RemoveFragment(WORLD_MAP_FRAGMENT)
-	WORLD_MAP_FRAGMENT = ZO_SimpleSceneFragment:New(ZO_WorldMap)
-	WORLD_MAP_SCENE:AddFragment(WORLD_MAP_FRAGMENT)
-	GAMEPAD_WORLD_MAP_SCENE:AddFragment(WORLD_MAP_FRAGMENT)
+	WORLD_MAP_FRAGMENT.Show = ZO_SimpleSceneFragment.Show
+	WORLD_MAP_FRAGMENT.Hide = ZO_SimpleSceneFragment.Hide
 	-- when the map is opened/closed, the tiles need to be refreshed
 	local callback = function(oldState, newState)
 		if(newState == SCENE_SHOWING) then
@@ -692,6 +689,7 @@ function TrueExplor.OnAddonLoaded( _, addon )
 		-- without this, the map may be fully hidden upon login
 		zo_callLater(function() TrueExplor.needUpdate = true end, 1000)
 	end
+	
 	-- a long time ago, this addon used to save data in a different structure
 	-- if someone is still using such an old save file, refactor the contained data
 	TrueExplor.UpdateDataVersion()
