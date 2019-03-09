@@ -1,10 +1,31 @@
 ## Title: TrueExploration
-## APIVersion: 100025
-## Version: 1.5
+## APIVersion: 100026
+## Version: 1.6
 ## Author: Shinni
 ## SavedVariables: TE_SavedVars
-## DependsOn: LibAddonMenu-2.0 LibGPS
-## OptionalDependsOn: AUI
+## OptionalDependsOn: LibStub LibAddonMenu-2.0 LibMapPing LibGPS AUI
+
+libs\LibStub\LibStub.lua
+
+libs\LibAddonMenu-2.0\LibAddonMenu-2.0.lua
+
+libs\LibAddonMenu-2.0\controls\panel.lua
+libs\LibAddonMenu-2.0\controls\submenu.lua
+libs\LibAddonMenu-2.0\controls\button.lua
+libs\LibAddonMenu-2.0\controls\checkbox.lua
+libs\LibAddonMenu-2.0\controls\colorpicker.lua
+libs\LibAddonMenu-2.0\controls\custom.lua
+libs\LibAddonMenu-2.0\controls\description.lua
+libs\LibAddonMenu-2.0\controls\dropdown.lua
+libs\LibAddonMenu-2.0\controls\editbox.lua
+libs\LibAddonMenu-2.0\controls\header.lua
+libs\LibAddonMenu-2.0\controls\slider.lua
+libs\LibAddonMenu-2.0\controls\texture.lua
+libs\LibAddonMenu-2.0\controls\iconpicker.lua
+libs\LibAddonMenu-2.0\controls\divider.lua
+
+libs\LibMapPing\LibMapPing.lua
+libs\LibGPS\LibGPS.lua
 
 language\en.lua
 language\$(language).lua
