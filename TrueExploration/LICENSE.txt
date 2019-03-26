@@ -15,6 +15,7 @@ see libs/LibMapPing/LICENSE
 The library "LibStub" is Public Domain, see libs/LibStub/LibStub.lua
 
 The French localization was provided by lexo1000 ( https://www.esoui.com/forums/member.php?u=31558 )
+The Russian localization was provided by calisto ( https://www.esoui.com/forums/member.php?u=47859 )
 
 
 This Add-on is not created by, affiliated with or sponsored by ZeniMax Media Inc. or its affiliates.

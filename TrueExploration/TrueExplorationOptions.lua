@@ -3,7 +3,7 @@ function TrueExplor.setupOptions()
 		type = "panel",
 		name = "TrueExploration",
 		author = "Shinni",
-		version = "1.6",
+		version = "1.7",
 		registerForDefaults = true,
 	}
 	

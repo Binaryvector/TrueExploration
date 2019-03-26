@@ -693,6 +693,8 @@ function TrueExplor.OnAddonLoaded( _, addon )
 	-- a long time ago, this addon used to save data in a different structure
 	-- if someone is still using such an old save file, refactor the contained data
 	TrueExplor.UpdateDataVersion()
+	
+	LibDAU:VerifyAddon("TrueExploration")
 end
 
 EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_ADD_ON_LOADED , TrueExplor.OnAddonLoaded)
