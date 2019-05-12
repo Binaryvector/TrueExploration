@@ -4,15 +4,15 @@ https://creativecommons.org/licenses/by-nc-nd/4.0/
 https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
 
 The library "LibAddonMenu" is © 2016 Ryan Lakanen (Seerah), used under The Artistic License 2.0:
-see libs/LibAddonMenu-2.0/LICENSE
+see libs/LibAddonMenu-2.0/LibAddonMenu-2.0/LICENSE
 
 The library "LibGPS" is © 2018 sirinsidiator, used under The Artistic License 2.0:
-see libs/LibGPS/LICENSE
+see libs/LibGPS/LibGPS/LICENSE
 
 The library "LibMapPing" is © 2016 sirinsidiator, used under The Artistic License 2.0:
-see libs/LibMapPing/LICENSE
+see libs/LibGPS/LibMapPing/LICENSE
 
-The library "LibStub" is Public Domain, see libs/LibStub/LibStub.lua
+The library "LibStub" is Public Domain, see libs/LibGPS/LibStub/LibStub.lua
 
 The French localization was provided by lexo1000 ( https://www.esoui.com/forums/member.php?u=31558 )
 The Russian localization was provided by calisto ( https://www.esoui.com/forums/member.php?u=47859 )
