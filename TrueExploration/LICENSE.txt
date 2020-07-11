@@ -1,18 +1,20 @@
 
-Except otherwise noted, this add-on is © 2019 Shinni, under a Creative Commons Attribution-NonComercial-NoDerivatives license:
+Except otherwise noted, this add-on is © 2020 Shinni, under a Creative Commons Attribution-NonComercial-NoDerivatives license:
 https://creativecommons.org/licenses/by-nc-nd/4.0/
 https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
 
 The library "LibAddonMenu" is © 2016 Ryan Lakanen (Seerah), used under The Artistic License 2.0:
 see libs/LibAddonMenu-2.0/LibAddonMenu-2.0/LICENSE
 
-The library "LibGPS" is © 2018 sirinsidiator, used under The Artistic License 2.0:
-see libs/LibGPS/LibGPS/LICENSE
+The library "LibGPS" is © 2020 sirinsidiator, used under The Artistic License 2.0:
+see libs/LibGPS/LICENSE
 
-The library "LibMapPing" is © 2016 sirinsidiator, used under The Artistic License 2.0:
-see libs/LibGPS/LibMapPing/LICENSE
+The library "LibMapPing" is © 2020 sirinsidiator, used under The Artistic License 2.0:
+see libs/LibMapPing/LICENSE
 
-The library "LibStub" is Public Domain, see libs/LibGPS/LibStub/LibStub.lua
+The library "LibChatMessage" is © sirinsidiator.
+
+The library "LibDebugLogger" is © sirinsidiator.
 
 The French localization was provided by lexo1000 ( https://www.esoui.com/forums/member.php?u=31558 )
 The Russian localization was provided by calisto ( https://www.esoui.com/forums/member.php?u=47859 )
