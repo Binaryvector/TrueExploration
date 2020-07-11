@@ -7,11 +7,12 @@
     controls = {sliderData, buttonData} -- used by LAM (optional)
     disabled = function() return db.someBooleanSetting end, -- or boolean (optional)
     disabledLabel = function() return db.someBooleanSetting end, -- or boolean (optional)
+    helpUrl = "https://www.esoui.com/portal.php?id=218&a=faq", -- a string URL or a function that returns the string URL (optional)
     reference = "MyAddonSubmenu" -- unique global reference to control (optional)
 } ]]
 
-local widgetVersion = 13
-local LAM = LibStub("LibAddonMenu-2.0")
+local widgetVersion = 14
+local LAM = LibAddonMenu2
 if not LAM:RegisterWidget("submenu", widgetVersion) then return end
 
 local wm = WINDOW_MANAGER
@@ -136,6 +137,11 @@ function LAMCreateControl.submenu(parent, submenuData, controlName)
     arrow:SetDimensions(28, 28)
     arrow:SetTexture("EsoUI\\Art\\Miscellaneous\\list_sortdown.dds") --list_sortup for the other way
     arrow:SetAnchor(TOPRIGHT, bg, TOPRIGHT, -5, 5)
+
+    local faqTexture = LAM.util.CreateFAQTexture(control)
+    if faqTexture then
+        faqTexture:SetAnchor(RIGHT, arrow, LEFT, 0, 0)
+    end
 
     --figure out the cool animation later...
     control.animation = am:CreateTimeline()

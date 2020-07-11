@@ -16,11 +16,12 @@
     warning = "May cause permanent awesomeness.", -- or string id or function returning a string (optional)
     requiresReload = false, -- boolean, if set to true, the warning text will contain a notice that changes are only applied after an UI reload and any change to the value will make the "Apply Settings" button appear on the panel which will reload the UI when pressed (optional)
     default = defaults.var, -- default value or function that returns the default value (optional)
+    helpUrl = "https://www.esoui.com/portal.php?id=218&a=faq", -- a string URL or a function that returns the string URL (optional)
     reference = "MyAddonIconPicker" -- unique global reference to control (optional)
 } ]]
 
-local widgetVersion = 8
-local LAM = LibStub("LibAddonMenu-2.0")
+local widgetVersion = 10
+local LAM = LibAddonMenu2
 if not LAM:RegisterWidget("iconpicker", widgetVersion) then return end
 
 local wm = WINDOW_MANAGER
@@ -134,9 +135,12 @@ function IconPickerMenu:Initialize(name)
 end
 
 function IconPickerMenu:OnMouseEnter(icon)
-    InitializeTooltip(InformationTooltip, icon, TOPLEFT, 0, 0, BOTTOMRIGHT)
-    SetTooltipText(InformationTooltip, LAM.util.GetStringFromValue(icon.tooltip))
-    InformationTooltipTopLevel:BringWindowToTop()
+    local tooltipText = icon.tooltip and LAM.util.GetStringFromValue(icon.tooltip)
+    if tooltipText and tooltipText ~= "" then
+        InitializeTooltip(InformationTooltip, icon, TOPLEFT, 0, 0, BOTTOMRIGHT)
+        SetTooltipText(InformationTooltip, tooltipText)
+        InformationTooltipTopLevel:BringWindowToTop()
+    end
 end
 
 function IconPickerMenu:OnMouseExit(icon)

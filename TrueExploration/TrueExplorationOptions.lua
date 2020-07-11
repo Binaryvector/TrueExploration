@@ -1,9 +1,22 @@
 function TrueExplor.setupOptions()
+	
+	local AddOnManager = GetAddOnManager()
+	local displayVersion = ""
+	for addonIndex = 1, AddOnManager:GetNumAddOns() do
+		local name = AddOnManager:GetAddOnInfo(addonIndex)
+		if name == "TrueExploration" then
+			local versionInt = AddOnManager:GetAddOnVersion(addonIndex)
+			local rev = versionInt % 100
+			local version = zo_floor(versionInt / 100) % 100
+			displayVersion = string.format("%d.%d", version, rev)
+		end
+	end
+	
 	local panelData = {
 		type = "panel",
 		name = "TrueExploration",
 		author = "Shinni",
-		version = "1.8",
+		version = displayVersion,
 		registerForDefaults = true,
 	}
 	
@@ -175,7 +188,6 @@ function TrueExplor.setupOptions()
 		},
 	}
 
-	local LAM = LibStub("LibAddonMenu-2.0")
-	LAM:RegisterAddonPanel("TrueExplorationOptions", panelData)
-	LAM:RegisterOptionControls("TrueExplorationOptions", optionsTable)
+	LibAddonMenu2:RegisterAddonPanel("TrueExplorationOptions", panelData)
+	LibAddonMenu2:RegisterOptionControls("TrueExplorationOptions", optionsTable)
 end

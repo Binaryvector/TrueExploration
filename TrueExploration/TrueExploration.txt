@@ -1,6 +1,7 @@
 ## Title: TrueExploration
-## APIVersion: 100027
-## Version: 1.8
+## APIVersion: 100031
+## Version: 1.9
+## AddOnVersion: 109
 ## Author: Shinni
 ## SavedVariables: TE_SavedVars
 ## DependsOn: LibAddonMenu-2.0 LibGPS 

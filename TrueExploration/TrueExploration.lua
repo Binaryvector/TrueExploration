@@ -2,7 +2,7 @@ if not TrueExplor then
 	TrueExplor = {}
 end
 local TrueExplor = _G["TrueExplor"]
-local GPS = LibStub("LibGPS2")
+local GPS = LibGPS2
 
 -- settings
 TrueExplor.radius = {

@@ -3,10 +3,18 @@
 ------------------------------------------------------------------
 
 
---Register LAM with LibStub
-local MAJOR, MINOR = "LibAddonMenu-2.0", 29
-local lam, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
-if not lam then return end --the same or newer version of this lib is already loaded into memory
+local MAJOR, MINOR = "LibAddonMenu-2.0", 31
+
+local lam
+if(not LibStub) then
+    lam = {}
+else
+    -- Optionally register LAM with LibStub
+    lam = LibStub:NewLibrary(MAJOR, MINOR)
+    if not lam then
+        return --the same or newer version of this lib is already loaded into memory
+    end
+end
 LibAddonMenu2 = lam
 
 local messages = {}
@@ -29,6 +37,9 @@ end
 local logger
 if LibDebugLogger then
     logger = LibDebugLogger(MAJOR)
+else
+    local function noop() end
+    logger = setmetatable({}, { __index = function() return noop end })
 end
 
 if LAMSettingsPanelCreated and not LAMCompatibilityWarning then
@@ -78,8 +89,59 @@ local function GetStringFromValue(value)
     return value
 end
 
+local FAQ_ICON_COLOR = ZO_ColorDef:New("FFFFFF") -- white
+local FAQ_ICON_MOUSE_OVER_COLOR = ZO_ColorDef:New("B8B8D3") -- dark-blue/white
+local FAQ_ICON_MOUSE_OVER_ALPHA = 1
+local FAQ_ICON_MOUSE_EXIT_ALPHA = 0.4
+local FAQ_ICON_SIZE = 23
+local FAQ_ICON_TOOTIP_TEMPLATE = "%s: %s"
+
 local function GetColorForState(disabled)
     return disabled and ZO_DEFAULT_DISABLED_COLOR or ZO_DEFAULT_ENABLED_COLOR
+end
+
+local function CreateFAQTexture(control)
+    local controlData = control.data
+    if not control or not controlData then logger:Warn("CreateFAQTexture - missing or invalid control") return end
+    local helpUrl = controlData and GetStringFromValue(controlData.helpUrl)
+    if not helpUrl or helpUrl == "" then return end
+
+    local faqControl = wm:CreateControl(nil, control, CT_TEXTURE)
+    control.faqControl = faqControl
+
+    faqControl:SetDrawLayer(DL_OVERLAY)
+    faqControl:SetTexture("EsoUI\\Art\\miscellaneous\\help_icon.dds")
+    faqControl:SetDimensions(FAQ_ICON_SIZE, FAQ_ICON_SIZE)
+    faqControl:SetColor(FAQ_ICON_COLOR:UnpackRGBA())
+    faqControl:SetAlpha(FAQ_ICON_MOUSE_EXIT_ALPHA)
+    faqControl:SetHidden(false)
+
+    faqControl.data = faqControl.data or {}
+    faqControl.data.helpUrl = helpUrl
+    faqControl.data.tooltipText = FAQ_ICON_TOOTIP_TEMPLATE:format(util.L.WEBSITE, helpUrl)
+
+    faqControl:SetMouseEnabled(true)
+    local function onMouseExitFAQ(ctrl)
+        ZO_Options_OnMouseExit(ctrl)
+        ctrl:SetColor(FAQ_ICON_COLOR:UnpackRGBA())
+        ctrl:SetAlpha(FAQ_ICON_MOUSE_EXIT_ALPHA)
+    end
+    faqControl:SetHandler("OnMouseUp", function(self, button, upInside)
+        if button == MOUSE_BUTTON_INDEX_LEFT and upInside then
+            --As the parent control's OnMouseExit won't be called because of the popup "open website":
+            --We hide the faq texture ourself
+            onMouseExitFAQ(self, true)
+            RequestOpenUnsafeURL(helpUrl)
+        end
+    end)
+    faqControl:SetHandler("OnMouseEnter", function(self)
+        ZO_Options_OnMouseEnter(self)
+        self:SetColor(FAQ_ICON_MOUSE_OVER_COLOR:UnpackRGBA()) --light blue
+        self:SetAlpha(FAQ_ICON_MOUSE_OVER_ALPHA)
+    end, "LAM2_FAQTexture_OnMouseEnter")
+    faqControl:SetHandler("OnMouseExit", onMouseExitFAQ, "LAM2_FAQTexture_OnMouseExit")
+
+    return faqControl
 end
 
 local function CreateBaseControl(parent, controlData, controlName)
@@ -102,23 +164,40 @@ local function CreateLabelAndContainerControl(parent, controlData, controlName)
     container:SetDimensions(width / 3, MIN_HEIGHT)
     control.container = container
 
-    local label = wm:CreateControl(nil, control, CT_LABEL)
+    local labelContainer
+    local faqTexture = CreateFAQTexture(control)
+    if faqTexture then
+        labelContainer = wm:CreateControl(nil, control, CT_CONTROL)
+        labelContainer:SetHeight(MIN_HEIGHT)
+        control.labelContainer = container
+    end
+
+    local label = wm:CreateControl(nil, labelContainer or control, CT_LABEL)
     label:SetFont("ZoFontWinH4")
     label:SetHeight(MIN_HEIGHT)
     label:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
     label:SetText(GetStringFromValue(controlData.name))
     control.label = label
 
+    local labelAnchorTarget = labelContainer or label
     if control.isHalfWidth then
         control:SetDimensions(width / 2, MIN_HEIGHT * 2 + HALF_WIDTH_LINE_SPACING)
-        label:SetAnchor(TOPLEFT, control, TOPLEFT, 0, 0)
-        label:SetAnchor(TOPRIGHT, control, TOPRIGHT, 0, 0)
-        container:SetAnchor(TOPRIGHT, control.label, BOTTOMRIGHT, 0, HALF_WIDTH_LINE_SPACING)
+        labelAnchorTarget:SetAnchor(TOPLEFT, control, TOPLEFT, 0, 0)
+        labelAnchorTarget:SetAnchor(TOPRIGHT, control, TOPRIGHT, 0, 0)
+        container:SetAnchor(TOPRIGHT, labelAnchorTarget, BOTTOMRIGHT, 0, HALF_WIDTH_LINE_SPACING)
     else
         control:SetDimensions(width, MIN_HEIGHT)
         container:SetAnchor(TOPRIGHT, control, TOPRIGHT, 0, 0)
-        label:SetAnchor(TOPLEFT, control, TOPLEFT, 0, 0)
-        label:SetAnchor(TOPRIGHT, container, TOPLEFT, 5, 0)
+        labelAnchorTarget:SetAnchor(TOPLEFT, control, TOPLEFT, 0, 0)
+        labelAnchorTarget:SetAnchor(TOPRIGHT, container, TOPLEFT, 5, 0)
+    end
+
+    if faqTexture then
+        faqTexture:ClearAnchors()
+        faqTexture:SetAnchor(LEFT, label, RIGHT, 5, -1)
+        faqTexture:SetParent(labelContainer)
+        label:SetAnchor(LEFT, labelContainer, LEFT)
+        label:SetDimensionConstraints(0, 0, labelContainer:GetWidth() - faqTexture:GetWidth(), 0)
     end
 
     control.data.tooltipText = GetStringFromValue(control.data.tooltip)
@@ -392,14 +471,13 @@ local localization = {
         RELOAD_DIALOG_RELOAD_BUTTON = "Neu laden",
         RELOAD_DIALOG_DISCARD_BUTTON = "Verwerfen",
     },
-    ru = { -- provided by TERAB1T
+    ru = { -- provided by TERAB1T, updated by andy.s
         PANEL_NAME = "Дополнения",
         VERSION = "Версия: <<X:1>>",
         WEBSITE = "Посетить сайт",
-        FEEDBACK = "отзыв",
+        FEEDBACK = "Отзыв",
         TRANSLATION = "Перевод",
-        DONATION = "жертвовать",
-        PANEL_INFO_FONT = "RuESO/fonts/Univers57.otf|14|soft-shadow-thin",
+        DONATION = "Жертвовать",
         RELOAD_UI_WARNING = "Для применения этой настройки необходима перезагрузка интерфейса.",
         RELOAD_DIALOG_TITLE = "Необходима перезагрузка интерфейса",
         RELOAD_DIALOG_TEXT = "Для применения некоторых изменений необходима перезагрузка интерфейса. Перезагрузить интерфейс сейчас или отменить изменения?",
@@ -419,12 +497,17 @@ local localization = {
         RELOAD_DIALOG_RELOAD_BUTTON = "Recargar",
         RELOAD_DIALOG_DISCARD_BUTTON = "Cancelar",
     },
-    jp = { -- provided by k0ta0uchi
+    jp = { -- provided by k0ta0uchi, updated by Calamath
         PANEL_NAME = "アドオン設定",
         WEBSITE = "ウェブサイトを見る",
         FEEDBACK = "フィードバック",
         TRANSLATION = "訳書",
-        DONATION = "寄贈する",
+        DONATION = "寄付",
+        RELOAD_UI_WARNING = "この設定変更を有効にするには、UIのリロードが必要です。",
+        RELOAD_DIALOG_TITLE = "UIのリロードが必要",
+        RELOAD_DIALOG_TEXT = "一部の変更を有効にするには、UIのリロードが必要です。 今すぐリロードしますか、それとも変更内容を破棄しますか？",
+        RELOAD_DIALOG_RELOAD_BUTTON = "リロード",
+        RELOAD_DIALOG_DISCARD_BUTTON = "破棄",
     },
     zh = { -- provided by bssthu
         PANEL_NAME = "插件",
@@ -442,17 +525,6 @@ local localization = {
         RELOAD_DIALOG_RELOAD_BUTTON = "Przeładuj",
         RELOAD_DIALOG_DISCARD_BUTTON = "Porzuć",
     },
-    kr = { -- provided by p.walker
-        PANEL_NAME = "蝠盜蠨",
-        VERSION = "纄訄: <<X:1>>",
-        WEBSITE = "裹芬襴钸 縩紸",
-        PANEL_INFO_FONT = "EsoKR/fonts/Univers57.otf|14|soft-shadow-thin",
-        RELOAD_UI_WARNING = "襴 茤訕襄 绀溽靘籴 風滼筼 訁袩靘瀰褄靴 UI 苈穜滠遨襴 靄袔革瓈瓤.",
-        RELOAD_DIALOG_TITLE = "UI 苈穜滠遨 靄袔",
-        RELOAD_DIALOG_TEXT = "绀溽瘜 茤訕 謑 UI 苈穜滠遨襄 靄袔穜靘璔 芬靭襴 覈蒵瓈瓤. 诀瀈 苈穜滠遨靘蓜溠蒵瓈灌? 蝄瓈籴 绀溽襄 迨莌靘蓜溠蒵瓈灌?",
-        RELOAD_DIALOG_RELOAD_BUTTON = "苈穜滠遨",
-        RELOAD_DIALOG_DISCARD_BUTTON = "绀溽迨莌",
-    },
     br = { -- provided by mlsevero & FelipeS11
         PANEL_NAME = "Addons",
         AUTHOR = string.format("%s: <<X:1>>", GetString(SI_ADDON_MANAGER_AUTHOR)), -- "Autor: <<X:1>>"
@@ -469,7 +541,29 @@ local localization = {
     },
 }
 
-util.L = ZO_ShallowTableCopy(localization[GetCVar("Language.2")] or {}, localization["en"])
+do
+    local EsoKR = EsoKR
+    if EsoKR and EsoKR:isKorean() then
+        util.L = ZO_ShallowTableCopy({ -- provided by whya5448
+            PANEL_NAME = EsoKR:E("애드온"),
+            AUTHOR = string.format("%s: <<X:1>>", GetString(SI_ADDON_MANAGER_AUTHOR)), -- "Author: <<X:1>>"
+            VERSION = EsoKR:E("버전: <<X:1>>"),
+            WEBSITE = EsoKR:E("웹사이트 방문"),
+            FEEDBACK = EsoKR:E("피드백"),
+            TRANSLATION = EsoKR:E("번역"),
+            DONATION = EsoKR:E("기부"),
+            PANEL_INFO_FONT = "EsoKR/fonts/Univers57.otf|14|soft-shadow-thin",
+            RELOAD_UI_WARNING = EsoKR:E("이 설정을 변경하면 효과를 적용하기위해 UI 새로고침이 필요합니다."),
+            RELOAD_DIALOG_TITLE = EsoKR:E("UI 새로고침 필요"),
+            RELOAD_DIALOG_TEXT = EsoKR:E("변경된 설정 중 UI 새로고침을 필요로하는 사항이 있습니다. 지금 새로고침하시겠습니까? 아니면 변경을 취소하시겠습니까?"),
+            RELOAD_DIALOG_RELOAD_BUTTON = EsoKR:E("새로고침"),
+            RELOAD_DIALOG_DISCARD_BUTTON = EsoKR:E("변경취소"),
+        }, localization["en"])
+    else
+        util.L = ZO_ShallowTableCopy(localization[GetCVar("Language.2")] or {}, localization["en"])
+    end
+end
+
 util.GetTooltipText = GetStringFromValue -- deprecated, use util.GetStringFromValue instead
 util.GetStringFromValue = GetStringFromValue
 util.GetDefaultValue = GetDefaultValue
@@ -482,6 +576,7 @@ util.RegisterForReloadIfNeeded = RegisterForReloadIfNeeded
 util.GetTopPanel = GetTopPanel
 util.ShowConfirmationDialog = ShowConfirmationDialog
 util.UpdateWarning = UpdateWarning
+util.CreateFAQTexture = CreateFAQTexture
 
 local ADDON_DATA_TYPE = 1
 local RESELECTING_DURING_REBUILD = true
@@ -813,9 +908,7 @@ local function CreateOptionsControls(panel)
                     err, anchorOffset, lastAddedControl, wasHalf = CreateAndAnchorWidget(parent, widgetData, offsetX, anchorOffset, lastAddedControl, wasHalf)
                     if err then
                         PrintLater(("Could not create %s '%s' of %s."):format(widgetData.type, GetStringFromValue(widgetData.name or "unnamed"), addonID))
-                        if logger then
-                            logger:Error(err)
-                        end
+                        logger:Error(err)
                     end
 
                     if isSubmenu then
@@ -884,9 +977,7 @@ local function ShowSetHandlerWarning(panel, handler)
     if hint then
         local message = ("Setting a handler on a panel is not recommended. Use the global callback %s instead. (%s on %s)"):format(hint, handler, panel.data.name)
         PrintLater(message)
-        if logger then
-            logger:Warn(message)
-        end
+        logger:Warn(message)
     end
 end
 
@@ -954,6 +1045,7 @@ local function CreateAddonSettingsMenuEntry()
 
     KEYBOARD_OPTIONS.currentPanelId = panelData.id + 1
     KEYBOARD_OPTIONS.panelNames[panelData.id] = panelData.name
+    KEYBOARD_OPTIONS.controlTable[panelData.id] = {}
 
     lam.panelId = panelData.id
 

@@ -1,11 +1,11 @@
-## APIVersion: 100026 100027
+## APIVersion: 100031 100032
 ## Title: LibAddonMenu-2.0
-## Version: 2.0 r29
-## AddOnVersion: 29
+## Version: 2.0 r31
+## AddOnVersion: 31
 ## IsLibrary: true
 ## OptionalDependsOn: LibStub LibDebugLogger
 ## Author: Seerah, sirinsidiator, et al.
-## Contributors: votan, merlight, Garkin, Randactyl, KuroiLight, silvereyes333, Baertram, kyoma, klingo, phuein
+## Contributors: votan, merlight, Garkin, Randactyl, KuroiLight, silvereyes333, Baertram, kyoma, klingo, phuein, Scootworks
 ## Description: A library to aid in the creation of option panels.
 ##
 ## This Add-on is not created by, affiliated with or sponsored by ZeniMax Media Inc. or its affiliates. 
@@ -14,7 +14,6 @@
 ##
 ## You can read the full terms at https://account.elderscrollsonline.com/add-on-terms
 
-LibStub\LibStub.lua
 
 LibAddonMenu-2.0\LibAddonMenu-2.0.lua
 
