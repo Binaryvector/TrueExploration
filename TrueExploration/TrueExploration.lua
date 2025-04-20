@@ -2,7 +2,6 @@ if not TrueExplor then
 	TrueExplor = {}
 end
 local TrueExplor = _G["TrueExplor"]
-local GPS = LibGPS2
 
 -- settings
 TrueExplor.radius = {
@@ -19,8 +18,6 @@ TrueExplor.dontHideMapTypes = {
 	--MAPTYPE_SUBZONE, --cities but some dungeons as well
 	MAPTYPE_COSMIC,
 	MAPTYPE_WORLD,
-	MAPTYPE_ALLIANCE -- the tamriel map is no longer maptype_world but _alliance...
-	-- probably some bug on ZOS' side
 }
 
 --internal stuff
@@ -32,6 +29,25 @@ TrueExplor.delay = 1000 --num of milliseconds until addon tries to discover curr
 TrueExplor.unitsPerNumber = 31 --number of units to be saved in one integer
 -- eso can't save integers larger than 2^31 (or they'll become floats and i lose the lsb information)
 TrueExplor.lastTime = 0
+
+-- mini alterntive to lib gps to make sure addon works on console where libgps might not exist
+local globalOffsetX, globalOffsetY = GetUniversallyNormalizedMapInfo(27) -- tamriel map id
+local GPS = {mapIdToMeasurement = {}}
+function GPS:GetCurrentMapMeasurements()
+	local mapId = GetCurrentMapId()
+	
+	if self.mapIdToMeasurement[mapId] then
+		return self.mapIdToMeasurement[mapId]
+	end
+	
+	local offsetX, offsetY, scaleX , scaleY = GetUniversallyNormalizedMapInfo(mapId)
+	local measurement = {
+		offsetX=offsetX, offsetY=offsetY,
+		scaleX=scaleX, scaleY=scaleY
+		}
+	self.mapIdToMeasurement[mapId] = measurement
+	return measurement
+end
 
 local SavedMaps
 

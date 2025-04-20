@@ -188,6 +188,46 @@ function TrueExplor.setupOptions()
 		},
 	}
 
-	LibAddonMenu2:RegisterAddonPanel("TrueExplorationOptions", panelData)
-	LibAddonMenu2:RegisterOptionControls("TrueExplorationOptions", optionsTable)
+	if LibAddonMenu2 then
+		LibAddonMenu2:RegisterAddonPanel("TrueExplorationOptions", panelData)
+		LibAddonMenu2:RegisterOptionControls("TrueExplorationOptions", optionsTable)
+	else
+		local options = {
+			allowDefaults = true,
+			allowRefresh = true,
+		}
+		local settings = LibHarvensAddonSettings:AddAddon(panelData.name, options)
+		-- label panelData.version
+		
+		local label = {
+			type = LibHarvensAddonSettings.ST_LABEL,
+			label = "TrueExploration console version " .. ZO_HIGHLIGHT_TEXT:Colorize(panelData.version),
+		}
+		settings:AddSetting(label)
+		
+		local LAMtoHAS = {
+			slider = LibHarvensAddonSettings.ST_SLIDER,
+			header = LibHarvensAddonSettings.ST_SECTION,
+			checkbox = LibHarvensAddonSettings.ST_CHECKBOX,
+		}
+		
+		for i, entry in ipairs(optionsTable) do
+			local newType = LAMtoHAS[entry.type]
+			if newType then
+				local newOption = {
+					type = newType,
+					label = entry.name,
+					default = entry.default,
+					setFunction = entry.getFunc,
+					getFunction = entry.setFunc,
+					tooltip = entry.tooltip,
+					min = entry.min,
+					max = entry.max,
+					step = entry.step,
+					disable = function() return (LibNodeDetection == nil) end,
+				}
+				settings:AddSetting(newOption)
+			end
+		end
+	end
 end

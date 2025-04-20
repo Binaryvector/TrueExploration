@@ -1,24 +1,10 @@
 
-Except otherwise noted, this add-on is © 2020 Shinni, under a Creative Commons Attribution-NonComercial-NoDerivatives license:
+Except otherwise noted, this add-on is © 2025 Shinni, under a Creative Commons Attribution-NonComercial-NoDerivatives license:
 https://creativecommons.org/licenses/by-nc-nd/4.0/
 https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
 
-The library "LibAddonMenu" is © 2016 Ryan Lakanen (Seerah), used under The Artistic License 2.0:
-see libs/LibAddonMenu-2.0/LibAddonMenu-2.0/LICENSE
-
-The library "LibGPS" is © 2020 sirinsidiator, used under The Artistic License 2.0:
-see libs/LibGPS/LICENSE
-
-The library "LibMapPing" is © 2020 sirinsidiator, used under The Artistic License 2.0:
-see libs/LibMapPing/LICENSE
-
-The library "LibChatMessage" is © sirinsidiator.
-
-The library "LibDebugLogger" is © sirinsidiator.
-
 The French localization was provided by lexo1000 ( https://www.esoui.com/forums/member.php?u=31558 )
 The Russian localization was provided by calisto ( https://www.esoui.com/forums/member.php?u=47859 )
-
 
 This Add-on is not created by, affiliated with or sponsored by ZeniMax Media Inc. or its affiliates.
 The Elder Scrolls® and related logos are registered trademarks or trademarks of ZeniMax Media Inc. in
