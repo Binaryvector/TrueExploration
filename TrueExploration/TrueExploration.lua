@@ -363,15 +363,11 @@ function TrueExplor.Discover()
 	end
 	
 	--local buildTime = GetGameTimeMilliseconds()
-	
-	local globalX, globalY = GPS:LocalToGlobal(GetMapPlayerPosition("player"))
-	if not globalX then -- aurbis map
-		return
-	end
-	
-	local x, y
+	local measurement = map.measurement
+	local x, y = GetMapPlayerPosition("player")
+	local globalX = x * measurement.scaleX + measurement.offsetX
+	local globalY = y * measurement.scaleY + measurement.offsetY
 	local tileX, tileY, firstTileX, firstTileY
-	local measurement
 	local wasAnyChanged, wasChanged
 	while map do
 		--d("uncover " .. mapName)
@@ -710,7 +706,6 @@ function TrueExplor.OnAddonLoaded( _, addon )
 	-- if someone is still using such an old save file, refactor the contained data
 	TrueExplor.UpdateDataVersion()
 	
-	LibDAU:VerifyAddon("TrueExploration")
 end
 
 EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_ADD_ON_LOADED , TrueExplor.OnAddonLoaded)

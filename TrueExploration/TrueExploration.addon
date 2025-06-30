@@ -4,15 +4,13 @@
 ## AddOnVersion: 111
 ## Author: Shinni
 ## SavedVariables: TE_SavedVars
-## ConsoleDependsOn:
+## ConsoleDependsOn: LibAddonMenu-2.0
 ## PCDependsOn: LibAddonMenu-2.0
 ## OptionalDependsOn: AUI LibDebugLogger
-
-keyboard/LibDAU/LibDAU.lua
 
 language/en.lua
 language/$(language).lua
 
-TrueExploration.lua
 TrueExploration.xml
+TrueExploration.lua
 TrueExplorationOptions.lua
