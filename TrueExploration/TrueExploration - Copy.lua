@@ -3,6 +3,136 @@ if not TrueExplor then
 end
 local TrueExplor = _G["TrueExplor"]
 
+-- TODO
+-- higher levels can be done via surfaces
+-- best do this without creating a table for each tile
+-- create tile only if needed
+-- make top left be the unit anchor, removes additional offsets
+
+local EXCLUDED_MAP_TYPES = {
+	--MAPTYPE_SUBZONE, --cities but some dungeons as well
+	MAPTYPE_COSMIC,
+	MAPTYPE_WORLD,
+}
+local NUM_BOTTOMLEVEL_TILES = 48 --needs to be divisible by all radii. number of height/width divisions on the worldmap
+local NUM_LEVELS = 4
+local TOPLEVEL_WIDTH = (2^MAX_LEVEL)
+local NUM_TOPLEVEL_TILES = TOTAL_UNITS / TOPLEVEL_WIDTH
+assert(TOTAL_UNITS % TOPLEVEL_WIDTH == 0)
+
+local CompositeManager = ZO_Object:Subclass()
+function CompositeManager:New( ... )
+	local result = ZO_Object.New(self)
+	result:Initialize( ... )
+	return result
+end
+
+function CompositeManager:Initialize(container, numLevels, numTopLevelTiles)
+	self.numLevels = numLevels
+	self.topLevelWidth = 2^numLevels
+	self.numTopLevelTiles = numTopLevelTiles
+	self.numBottomLevelTiles = numTopLevelTiles * self.topLevelWidth
+	self.tileSize = {}
+	self.tileSurface = {}
+	
+	local composite = container:CreateControl(nil, CT_TEXTURECOMPOSITE)
+	composite:SetDrawTier(2)
+	composite:SetAnchor(CENTER, container, TOPLEFT, 0, 0)
+	composite:SetPixelRoundingEnabled(false)
+	composite:SetTexture("EsoUI/Art/WorldMap/worldmap_map_background_512tile.dds")
+	self.composite = composite
+end
+
+function CompositeManager:ClearTiles()
+	ZO_ClearTable(self.tiles)
+	self.composite:ClearSurfaces()
+end
+
+function CompositeManager:RebuildForMapName(mapName)
+	self:ClearTiles()
+	for x = 0, self.numTopLevelTiles - 1 do
+		for y = 0, self.numTopLevelTiles - 1 do
+			self:RecursivelyRebuildLevels(x, y, self.topLevelWidth, mapName)
+		end
+	end 
+end
+
+function CompositeManager:RecursivelyRebuildLevels(x, y, width, mapName)
+	if self:AnyDiscoveredInRect(x, y, width, width, mapName) then
+		local newWidth = width / 2
+		if newWidth < 1 then return end -- could do 1/2 and use it for the textures
+		for i = 0, 1 do
+			for j = 0, 1 do
+				self:RecursivelyRebuildLevels(x + i * newWidth, y + j * newWidth, newWidth, mapName)
+			end
+		end
+	else
+		self:AddNewTile(x, y, width)
+	end
+end
+
+function CompositeManager:AddNewTile(tileX, tileY, tileSize)
+	local tileId = tileX + tileY * self.numBottomLevelTiles
+	self.tileSize[tileId] = tileSize
+	local relX = tileX / self.numBottomLevelTiles
+	local relY = tileY / self.numBottomLevelTiles
+	local surface = self.composite:AddSurface(
+		tileX / self.numBottomLevelTiles,
+		tileY / self.numBottomLevelTiles,
+		(tileX+tileSize) / self.numBottomLevelTiles,
+		(tileY+tileSize) / self.numBottomLevelTiles)
+	self.tileSurface[tileId] = surface
+end
+
+function CompositeManager:RemoveTile(tileId)
+	self.composite:RemoveSurface(self.tileSurface[tileId])
+	self.tileSize[tileId] = nil
+	self.tileSurface[tileId] = nil
+end
+
+function CompositeManager:OnDiscovered(tileX, tileY)
+	local tileId = tileX + tileY * self.numBottomLevelTiles
+	local width = 1
+	while width <= self.topLevelWidth do
+		tileX = zo_floor(tileX / width)
+		tileY = zo_floor(tileY / width)
+		tileId = tileX + tileY * self.numBottomLevelTiles
+		if self.tileSize[tileId] then
+			self:RemoveTile(tileId)
+			self:RecursivelyRebuildLevels(tileX, tileY, width)
+		end
+		width = width * 2
+	end
+	--
+end
+
+function CompositeManager:FormatSurfaceForTile(tileId, width, height)
+	-- set size + position
+	local tileX = tileX % self.numBottomLevelTiles
+	local tileY = zo_floor(tileY / self.numBottomLevelTiles)
+	local size = (self.tileSize[tileId]-1) / self.numBottomLevelTiles
+	-- todo
+	local width, height = self.container:GetDimensions() -- might not be true for minimaps?
+	self.compositeSetInsets(self.tileSurface[tileId],
+		relX * width, (relX+size) * width, 
+		relY * height, (relY+size) * height)
+		-- todo, should 2nd inset be increased by tileSize - 1?
+		-- also, i thought we needed negative insets? apparently not...
+		-- maybe cleaner if composite has dimension 0 
+		-- but that might be hidden because of internal optimizations...
+end
+
+function CompositeManager:AnyDiscoveredInRect(x, y, width, height, mapName)
+	for i = 0, width do
+		for j = 0, height do
+			if TrueExplor.IsDiscovered(mapName, (x + i) + (y + j) * self.numBottomLevelTiles) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- settings
 TrueExplor.radius = {
 	[768] = 4, --dungeon
@@ -11,24 +141,20 @@ TrueExplor.radius = {
 	[2048] = 1, --zones
 	[5120] = 1,--96, -- cyrodiil (more than 50 panels will result in too much lag)
 }
-TrueExplor.total_units = 48 --needs to be divisible by all radii. number of height/width divisions on the worldmap
 TrueExplor.discoveredColor = { 1, 1, 1, 0 } -- rgba format
-TrueExplor.undiscoveredColor = { 1, 1, 1, 1 }
-TrueExplor.dontHideMapTypes = {
-	--MAPTYPE_SUBZONE, --cities but some dungeons as well
-	MAPTYPE_COSMIC,
-	MAPTYPE_WORLD,
-}
+TrueExplor.undiscoveredColor = { 1, 0, 0, 1 }
 
 --internal stuff
 TrueExplor.unitsPerTile = 1
-TrueExplor.mapTiles = {}
+TrueExplor.mapTiles = {{},{},{},{}}
+TrueExplor.mapTiles[0] = {}
 TrueExplor.dataVersion = 1
 TrueExplor.delay = 1000 --num of milliseconds until addon tries to discover current position
 -- to prevent the save file from bloating up, i save the discovered flag from multiple units as bits in a large integer.
 TrueExplor.unitsPerNumber = 31 --number of units to be saved in one integer
 -- eso can't save integers larger than 2^31 (or they'll become floats and i lose the lsb information)
 TrueExplor.lastTime = 0
+
 
 -- mini alterntive to lib gps to make sure addon works on console where libgps might not exist
 local globalOffsetX, globalOffsetY = GetUniversallyNormalizedMapInfo(27) -- tamriel map id
@@ -51,6 +177,8 @@ end
 
 local SavedMaps
 
+TrueExplor.controlPool = ZO_ControlPool:New("TE_MapTile", ZO_WorldMapContainer)
+
 -- help function to check if a table (array) contains a certain value
 function TrueExplor.contains(table, value)
 	for key, val in pairs(table) do
@@ -64,82 +192,63 @@ end
 -- each MapTile represents the point, where 4 units meet (or less if at the map's edge)
 -- self.unit = the Unit at the bottom left corner
 -- the other corners have the color of the respective neighbors of self.unit
-local TileDisplay = ZO_Object:Subclass()
-function TileDisplay:New( ... )
+local MapTile = ZO_Object:Subclass()
+function MapTile:New( ... )
 	local result = ZO_Object.New(self)
 	result:Initialize( ... )
 	return result
 end
 
-function TileDisplay:Initialize(parent)
-	local composite = parent:CreateControl(nil, CT_TEXTURECOMPOSITE)
-	composite:SetDrawTier(2)
-	composite:SetAnchor(CENTER, parent, TOPLEFT, 0, 0)
-	composite:SetPixelRoundingEnabled(false)
-	composite:SetTexture("EsoUI/Art/WorldMap/worldmap_map_background_512tile.dds")
-	for y = 0, TrueExplor.total_units - 1 do
-		for x = 0, TrueExplor.total_units - 1 do
-			composite:AddSurface(
-				x / TrueExplor.total_units,
-				(x+1) / TrueExplor.total_units,
-				y / TrueExplor.total_units,
-				(y+1) / TrueExplor.total_units)
-		end
-	end
-	self.composite = composite
+function MapTile:Initialize(index, unitX, unitY, level, parent)
+	self.index = index -- the number of this tile (tiles are line-wise numbered)
+	self.level = level
+	self.skip = 2^self.level
 	self.parent = parent
-	self.controls = {}
-	self.lastControl = 0
-	self.unusedControls = {}
+	self.unitX = unitX
+	self.unitY = unitY
+	self.unit = self.unitX + self.unitY * TrueExplor.total_units
+	self.color = {0, 0, 0, 1}
 end
 
-function TileDisplay:GetNewControl(x, y)
-	if self.lastControl > 0 then
-		local control = self.unusedControls[self.lastControl]
-		self.lastControl = self.lastControl - 1
+function MapTile:LinkWithNeighbors(list)
+	-- add the correct adjacent tiles that change their graphic depending on this tile's unit
+	self.right = self
+	self.bottom = self
+	self.bottomright = self
+	
+	if self.unitY + self.skip < TrueExplor.total_units then
+		self.bottom = TrueExplor.mapTiles[self.level][index + (TrueExplor.total_units / self.skip)]
 	end
-	return CreateControlFromVirtual(nil, self.parent, "TE_MapTile")
+	if self.unitX + self.skip < TrueExplor.total_units then
+		self.right = TrueExplor.mapTiles[self.level][index + 1]
+	end
+	if self.unitY + self.skip < TrueExplor.total_units and self.unitX + self.skip < TrueExplor.total_units then
+		self.bottomright = TrueExplor.mapTiles[self.level][index + 1 + (TrueExplor.total_units / self.skip)]
+	end
 end
 
 -- sets the layout of this tiles texture
 -- sets, position, width, height and the correct parent (needed for minimap - worldmap transition)
-function MapTile:SetLayout(width, height, parent)
-	self.parent = parent
-	local controlWidth = width / TrueExplor.total_units
-	local controlHeight = height / TrueExplor.total_units
-	local x, y
-	for index, control in pairs(self.controls) do
-		x = index % TrueExplor.total_units
-		y = z_floor(index / TrueExplor.total_units)
-		control:SetAnchor(TOPLEFT, parent, TOPLEFT, x * width, y * height)
-		control:SetParent(parent)
-		control:SetDimensions(controlWidth, controlHeight)
-		-- sets the u/v coordinates of the texture
-		self.control:SetTextureCoords(x / TrueExplor.total_units,
-									 (x+1) / TrueExplor.total_units,
-									  y / TrueExplor.total_units,
-									 (y+1) / TrueExplor.total_units)
-	end
-	
-	
-	local index
-	for y = 0, TrueExplor.total_units - 1 do
-		for x = 0, TrueExplor.total_units - 1 do
-			index = x + y * TrueExplor.total_units
-			composite:SetInsets(index + 1,
-				x * controlWidth, x * controlWidth, y * controlHeight, y * controlHeight)
-		end
-	end
-	self.composite:SetDimensions(controlWidth, controlHeight)
+function MapTile:SetLayout(widthPerUnit, heightPerUnit, parent)
+	if not self.control then return end
+	self.control:SetAnchor(TOPLEFT, parent, TOPLEFT, (self.unitX+0.5) * widthPerUnit, (self.unitY+0.5) * heightPerUnit)
+	self.control:SetParent(parent)
+	self.control:SetDimensions(widthPerUnit * self.skip, heightPerUnit * self.skip)
+	-- sets the u/v coordinates of the texture
+	self.control:SetTextureCoords((self.unitX) / TrueExplor.total_units,
+								 (self.unitX+self.skip) / TrueExplor.total_units,
+								  (self.unitY) / TrueExplor.total_units,
+								 (self.unitY+self.skip) / TrueExplor.total_units)
 end
 
 -- refreshes this tile's color value depending on the discovered flag
 function MapTile:RefreshColor( mapName )
+	assert(self.unit)
 	if not self.unit then
+		--self.color = TrueExplor.discoveredColor
 		return
 	end
-	TrueExplor.composite:ClearAllSurfaces()
-	self.surface = nil
+	
 	if self:IsDiscovered( mapName ) then
 		self.color = TrueExplor.discoveredColor
 		self.discovered = true
@@ -153,63 +262,89 @@ end
 function MapTile:IsDiscovered( mapName )
 	-- some fancy calculation because different map sizes result in different view radii
 	-- the view radius is actually a square, baseUnit is the unit at the center of the square this tile belongs to
-	local baseUnit = self.unit - zo_floor(TrueExplor.unitsPerTile / 2) - zo_floor(TrueExplor.unitsPerTile / 2) * TrueExplor.total_units
-	for i = 0, (TrueExplor.unitsPerTile - 1) do
-		for j = 0, (TrueExplor.unitsPerTile - 1) do
+	local shift = 0
+	if self.level == 0 then shift = 1 end
+	local baseUnit = self.unit - (self.skip - shift) - (self.skip - shift) * TrueExplor.total_units
+	baseUnit = baseUnit	- zo_floor(TrueExplor.unitsPerTile / 2) - zo_floor(TrueExplor.unitsPerTile / 2) * TrueExplor.total_units
+	for i = 0, (TrueExplor.unitsPerTile - 1) + (self.skip - shift) do
+		for j = 0, (TrueExplor.unitsPerTile - 1) + (self.skip - shift) do
 			if TrueExplor.IsDiscovered( mapName, baseUnit + i + j * TrueExplor.total_units ) then
 				return true
 			end
 		end
 	end
 	return false
-	
 end
 
 -- sets the color/opacity of the 4 corners of this tile's texture
 -- the color is used from the MapTile.color field and should be calculated earlier!
 -- (i.e. call RefreshColor before calling SetTileColor)
 function MapTile:SetTileColor()
-	if self.discovered and ((not self.left) or self.left.discovered) and ((not self.top) or self.top.discovered) and ((not self.topleft) or self.topleft.discovered) then
-		if self.control then
-			TrueExplor.controlPool:ReleaseObject(self.key)
-			self.control = nil
+	-- cancel if parent is undiscovered
+	
+	if self.level < 4 then
+		
+		local parentX = zo_floor((self.unitX-self.skip+1)/(self.skip))
+		local parentY = zo_floor((self.unitY-self.skip+1)/(self.skip))
+		local parentIndex = parentX + parentY * (TrueExplor.total_units / (self.skip))
+		assert(parentIndex+1 == self.index)
+		
+		local parentX = zo_floor((self.unitX-self.skip+1)/(2*self.skip))
+		local parentY = zo_floor((self.unitY-self.skip+1)/(2*self.skip))
+		local parentIndex = parentX + parentY * (TrueExplor.total_units / (2*self.skip))
+		local parentTile = TrueExplor.mapTiles[self.level+1][parentIndex+1]
+		if not parentTile.discovered then
+			if self.control then
+				self.control = nil
+				TrueExplor.controlPool:ReleaseObject(self.key)
+			end
+			return
 		end
-		if self.surface then
-			TrueExplor.composite:RemoveSurface(self.surface)
-			self.surface = nil
+	end
+	
+	if self.level > 0 then
+		if self.discovered then
+			if self.control then
+				self.control = nil
+				TrueExplor.controlPool:ReleaseObject(self.key)
+			end
+			return
 		end
+		if not self.control then
+			self.control, self.key = TrueExplor.controlPool:AcquireObject()
+		end
+		-- color of this tile
+		self.control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT , unpack(self.color) )
+		-- color of the tile's neigbors for gradient effect
+		self.control:SetVertexColors(VERTEX_POINTS_BOTTOMLEFT , unpack(self.color) )
+		self.control:SetVertexColors(VERTEX_POINTS_TOPRIGHT , unpack(self.color) )
+		self.control:SetVertexColors(VERTEX_POINTS_TOPLEFT , unpack(self.color) )
 		return
 	end
-	if (not self.discovered) and ((not self.left) or not self.left.discovered) and ((not self.top) or not self.top.discovered) and ((not self.topleft) or not self.topleft.discovered) then 
-		if not self.surface then
-			TrueExplor.composite:AddSurface(self.x / TrueExplor.total_units,
-										 (self.x+1) / TrueExplor.total_units,
-										  self.y / TrueExplor.total_units,
-										 (self.y+1) / TrueExplor.total_units)
-			self.surface = TrueExplor.composite:GetNumSurfaces()
-		end
-		return
-	end
+	
 	if not self.control then
-		return --self.control, self.key = TrueExplor.controlPool:AcquireObject()
+		self.control, self.key = TrueExplor.controlPool:AcquireObject()
 	end
+	
 	-- color of this tile
 	self.control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT , unpack(self.color) )
 	-- color of the tile's neigbors for gradient effect
 	self.control:SetVertexColors(VERTEX_POINTS_BOTTOMLEFT , unpack(self.left.color) )
 	self.control:SetVertexColors(VERTEX_POINTS_TOPRIGHT , unpack(self.top.color) )
 	self.control:SetVertexColors(VERTEX_POINTS_TOPLEFT , unpack(self.topleft.color) )
+	
 end
 
 -- set every corner of this tile's texture as undiscovered (needed during the map opening/closing animation)
 function MapTile:SetUndiscovered()
-	if not self.control then return end
+	--[[
 	-- color of my tile
 	self.control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT , unpack(TrueExplor.undiscoveredColor) )
 	-- color of my neigbors for gradient effect
 	self.control:SetVertexColors(VERTEX_POINTS_BOTTOMLEFT , unpack(TrueExplor.undiscoveredColor) )
 	self.control:SetVertexColors(VERTEX_POINTS_TOPRIGHT , unpack(TrueExplor.undiscoveredColor) )
 	self.control:SetVertexColors(VERTEX_POINTS_TOPLEFT , unpack(TrueExplor.undiscoveredColor) )
+	]]--
 end
 
 -- set all tiles as hidden (so the entire map becomes visible)
@@ -244,22 +379,21 @@ function TrueExplor.RefreshSingleTile(unitX, unitY)
 	
 	local mapName = GetMapTileTexture()
 	local control, index
-	for i = 0, TrueExplor.unitsPerTile+1 do
-		for j = 0, TrueExplor.unitsPerTile+1 do
-			control = TrueExplor.mapTiles[topLeftIndex + i + j * (TrueExplor.total_units+1)]
-			if control then
-				control:RefreshColor( mapName )
-			end
+	local skip = 0
+	for level, tiles in pairs(TrueExplor.mapTiles) do
+		skip = 2^level
+		for _, tile in pairs(tiles) do
+			--if tile.control then
+				tile:RefreshColor( mapName )
+			--end
 		end
 	end
-	for i = 0, TrueExplor.unitsPerTile+1 do
-		for j = 0, TrueExplor.unitsPerTile+1 do
-			control = TrueExplor.mapTiles[topLeftIndex + i + j * (TrueExplor.total_units+1)]
-			if control then
-				control:SetTileColor()
-				--control.control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT , 1,0,0,1 )
-			end
-			--TrueExplor.mapTiles[topLeft + i + j * (TrueExplor.total_units+1)].
+	for level, tiles in pairs(TrueExplor.mapTiles) do
+		skip = 2^level
+		for _, tile in pairs(tiles) do
+			--if tile.control then
+				tile:SetTileColor()
+			--end
 		end
 	end
 end
@@ -305,15 +439,17 @@ function TrueExplor.UpdateTiles()
 
 	-- update the color field of all the map tiles
 	local mapName = GetMapTileTexture()
-	for _, control in pairs( TrueExplor.mapTiles ) do
-		if control.control then
-			control.control:SetHidden(false)
+	for level, mapTiles in pairs(TrueExplor.mapTiles) do
+		for _, tile in pairs(mapTiles) do
+			if tile.control then tile.control:SetHidden(false) end
+			tile:RefreshColor( mapName )
 		end
-		control:RefreshColor( mapName )
 	end
-	-- adopt the color for all MapTile's textures
-	for _, control in pairs( TrueExplor.mapTiles ) do
-		control:SetTileColor()
+	for level, mapTiles in pairs(TrueExplor.mapTiles) do
+		-- adopt the color for all MapTile's textures
+		for _, tile in pairs(mapTiles) do
+			tile:SetTileColor()
+		end
 	end
 end
 
@@ -656,16 +792,16 @@ function TrueExplor.OnAddonLoaded( _, addon )
 		undiscoveredColor = TrueExplor.undiscoveredColor,
 		dontHideMapTypes = TrueExplor.dontHideMapTypes,
 	})
-	
+
 	-- get current settings
 	TrueExplor.radius = TrueExplor.settings.radius
 	TrueExplor.total_units =  TrueExplor.settings.units
 	TrueExplor.discoveredColor =  TrueExplor.settings.discoveredColor
-	TrueExplor.undiscoveredColor =  TrueExplor.settings.undiscoveredColor
+	--TrueExplor.undiscoveredColor =  TrueExplor.settings.undiscoveredColor
 	TrueExplor.dontHideMapTypes =  TrueExplor.settings.dontHideMapTypes
 	TrueExplor.hierarchy = {}
 	-- initialize options menu (see TrueExplorationOptions.lua)
-	--TrueExplor.setupOptions()
+	TrueExplor.setupOptions()
 	-- add debug chat commands
 	SLASH_COMMANDS["/tedebug"] = TrueExplor.Debug
 	SLASH_COMMANDS["/discover"] = TrueExplor.DiscoverAll
@@ -673,10 +809,16 @@ function TrueExplor.OnAddonLoaded( _, addon )
 	SLASH_COMMANDS["/clearmap"] = TrueExplor.ClearMap
 	
 	-- create mapTiles
-	for index = 0, ((TrueExplor.total_units+1)*(TrueExplor.total_units+1) - 1) do
-		TrueExplor.mapTiles[index] = MapTile:New( index )
+	local skip
+	for level, mapTiles in pairs(TrueExplor.mapTiles) do
+		skip = 2^level
+		for y = 0, TrueExplor.total_units / skip - 1 do
+			for x = 0, TrueExplor.total_units / skip - 1 do
+				local index = #mapTiles + 1
+				mapTiles[index] = MapTile:New(index, x * skip, y * skip, level)
+			end
+		end
 	end
-	--if true then return end
 	-- update the MapTile objects, when a new map is displayed
 	CALLBACK_MANAGER:RegisterCallback( "OnWorldMapChanged",TrueExplor.RefreshTiles)
 	
@@ -686,14 +828,15 @@ function TrueExplor.OnAddonLoaded( _, addon )
 	WORLD_MAP_FRAGMENT.Hide = ZO_SimpleSceneFragment.Hide
 	-- when the map is opened/closed, the tiles need to be refreshed
 	local callback = function(oldState, newState)
+		local level = 0
 		if(newState == SCENE_SHOWING) then
 			if AUI_MapContainer then
 				-- the tiles need to be placed onto the real map, when it is opened
 				local width, height = ZO_WorldMapContainer:GetDimensions()
-				local unitWidth = width / TrueExplor.total_units
-				local unitHeight = height / TrueExplor.total_units
+				local unitWidth = width / (TrueExplor.total_units)
+				local unitHeight = height / (TrueExplor.total_units)
 				for index = 0, ((TrueExplor.total_units+1)*(TrueExplor.total_units+1) - 1) do
-					TrueExplor.mapTiles[index]:SetLayout( unitWidth, unitHeight, ZO_WorldMapContainer )
+					TrueExplor.mapTiles[level][index]:SetLayout( unitWidth, unitHeight, ZO_WorldMapContainer )
 				end
 			end
 			TrueExplor.RefreshTiles()
@@ -701,10 +844,10 @@ function TrueExplor.OnAddonLoaded( _, addon )
 			if AUI_MapContainer then
 				-- the tiles need to be placed onto the minimap map, when the default map is closed
 				local width, height = AUI_MapContainer:GetDimensions()
-				local unitWidth = width / TrueExplor.total_units
-				local unitHeight = height / TrueExplor.total_units
+				local unitWidth = width / (TrueExplor.total_units)
+				local unitHeight = height / (TrueExplor.total_units)
 				for index = 0, ((TrueExplor.total_units+1)*(TrueExplor.total_units+1) - 1) do
-					TrueExplor.mapTiles[index]:SetLayout( unitWidth, unitHeight, AUI_MapContainer )
+					TrueExplor.mapTiles[level][index]:SetLayout( unitWidth, unitHeight, AUI_MapContainer )
 				end
 				TrueExplor.RefreshTiles()
 			end
@@ -721,13 +864,38 @@ function TrueExplor.OnAddonLoaded( _, addon )
 	
 	-- add zoom function for the tiles. when the map is zoomed into, the tiles need to scale as well
 	local oldDimensions = ZO_WorldMapContainer.SetDimensions
-	ZO_PreHook(ZO_WorldMapContainer, "SetDimensions", function(self, width, height, ...)
-		local unitWidth = width / TrueExplor.total_units
-		local unitHeight = height / TrueExplor.total_units
-		for index = 0, ((TrueExplor.total_units+1)*(TrueExplor.total_units+1) - 1) do
-			TrueExplor.mapTiles[index]:SetLayout( unitWidth, unitHeight, self )
+	ZO_WorldMapContainer.SetDimensions = function(self, width, height, ...)
+		local unitWidth = width / (TrueExplor.total_units)
+		local unitHeight = height / (TrueExplor.total_units)
+		local skip
+		for level, mapTiles in pairs(TrueExplor.mapTiles) do
+			skip = 2^level
+			for _, tile in pairs(mapTiles) do
+				tile:SetLayout(unitWidth, unitHeight, self)
+			end
 		end
-	end)
+		oldDimensions(self, width, height, ...)
+	end
+	-- add the same scaling code to the minimap
+	if AUI_MapContainer then
+		local oldDimensionsMM = AUI_MapContainer.SetDimensions
+		AUI_MapContainer.SetDimensions = function(self, width, height, ...)
+			if not ZO_WorldMap_IsWorldMapShowing() then
+				local unitWidth = width / (TrueExplor.total_units)
+				local unitHeight = height / (TrueExplor.total_units)
+				local x, y
+				local level = 0
+				for index = 0, ((TrueExplor.total_units+1)*(TrueExplor.total_units+1) - 1) do
+					TrueExplor.mapTiles[level][index]:SetLayout( unitWidth, unitHeight, self )
+				end
+			end
+			oldDimensionsMM(self, width, height, ...)
+		end
+		-- the minimap needs some time to be fully initialized
+		-- dirty hack :/
+		-- without this, the map may be fully hidden upon login
+		zo_callLater(function() TrueExplor.needUpdate = true end, 1000)
+	end
 	
 	-- a long time ago, this addon used to save data in a different structure
 	-- if someone is still using such an old save file, refactor the contained data
@@ -736,4 +904,4 @@ function TrueExplor.OnAddonLoaded( _, addon )
 end
 
 EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_ADD_ON_LOADED , TrueExplor.OnAddonLoaded)
---EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_PLAYER_ACTIVATED, TrueExplor.RefreshTiles)
+EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_PLAYER_ACTIVATED, TrueExplor.RefreshTiles)
