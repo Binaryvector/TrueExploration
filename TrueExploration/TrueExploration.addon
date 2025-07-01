@@ -13,4 +13,6 @@ language/$(language).lua
 
 TrueExploration.xml
 TrueExploration.lua
-TrueExplorationOptions.lua
+TileDisplay.lua
+DiscoveryData.lua
+##TrueExplorationOptions.lua
