@@ -5,8 +5,8 @@ TrueExplor.tileDisplay = TileDisplay
 
 function TileDisplay:Initialize(container, radius)
 	self.parent = container:CreateControl(nil, CT_CONTROL)
-	local composite = container:CreateControl(self.parent, CT_TEXTURECOMPOSITE)
-	composite:SetDrawTier(2)
+	local composite = self.parent:CreateControl(nil, CT_TEXTURECOMPOSITE)
+	composite:SetDrawLevel(2)
 	composite:SetPixelRoundingEnabled(false)
 	composite:SetTexture("EsoUI/Art/WorldMap/worldmap_map_background_512tile.dds")
 	for y = 0, TrueExplor.total_units - 1 do
@@ -23,7 +23,7 @@ function TileDisplay:Initialize(container, radius)
 	self.hideAllControl = CreateControlFromVirtual(nil, container, "TE_MapTile")
 	self.hideAllControl:SetHidden(true)
 	self.controls = {}
-	self.lastControl = 0
+	self.lastUnused = 0
 	self.unusedControls = {}
 	self.radius = radius
 	
@@ -35,9 +35,9 @@ function TileDisplay:GetControl(x, y)
 	local control = self.controls[unit]
 	if control then return control end
 	
-	if self.lastControl > 0 then
-		control = self.unusedControls[self.lastControl]
-		self.lastControl = self.lastControl - 1
+	if self.lastUnused > 0 then
+		control = self.unusedControls[self.lastUnused]
+		self.lastUnused = self.lastUnused - 1
 	else
 		control = CreateControlFromVirtual(nil, self.parent, "TE_MapTile")
 	end
@@ -46,8 +46,14 @@ function TileDisplay:GetControl(x, y)
 		(x+1) / TrueExplor.total_units,
 		y / TrueExplor.total_units,
 		(y+1) / TrueExplor.total_units)
+	local container = self.container
+	local width, height = container:GetDimensions()
+	local controlWidth = width / TrueExplor.total_units
+	local controlHeight = height / TrueExplor.total_units
+	control:SetAnchor(CENTER, container, TOPLEFT, (x / TrueExplor.total_units) * width, (y / TrueExplor.total_units) * height)
+	control:SetDimensions(controlWidth, controlHeight)
 	control:SetHidden(false)
-	self.controls[unit] = control`
+	self.controls[unit] = control
 	return control
 end
 
@@ -69,21 +75,23 @@ function TileDisplay:SetContainer(container, width, height)
 	self:UpdateSize()
 end
 
-function TileDisplay:UpdateSize()
+function TileDisplay:UpdateSize(width, height)
 	local container = self.container
-	local width, height = container:GetDimensions()
+	if not (width and height) then
+		width, height = container:GetDimensions()
+	end
 	self.hideAllControl:SetDimensions(width, height)
 	local controlWidth = width / TrueExplor.total_units
 	local controlHeight = height / TrueExplor.total_units
 	local x, y
 	for index, control in pairs(self.controls) do
 		x = index % TrueExplor.total_units
-		y = z_floor(index / TrueExplor.total_units)
-		control:SetAnchor(TOPLEFT, container, TOPLEFT, x * width, y * height)
+		y = zo_floor(index / TrueExplor.total_units)
+		control:SetAnchor(CENTER, container, TOPLEFT, (x / TrueExplor.total_units) * width, (y / TrueExplor.total_units) * height)
 		control:SetDimensions(controlWidth, controlHeight)
 	end
-	
 	local index
+	local composite = self.composite
 	for y = 0, TrueExplor.total_units - 1 do
 		for x = 0, TrueExplor.total_units - 1 do
 			index = x + y * TrueExplor.total_units
@@ -91,7 +99,7 @@ function TileDisplay:UpdateSize()
 				x * controlWidth, x * controlWidth, y * controlHeight, y * controlHeight)
 		end
 	end
-	self.composite:SetDimensions(controlWidth, controlHeight)
+	composite:SetDimensions(controlWidth, controlHeight)
 end
 
 function TileDisplay:RemoveAllControls()
@@ -102,12 +110,12 @@ function TileDisplay:RemoveAllControls()
 		self.unusedControls[lastUnused] = control
 	end
 	self.lastUnused = lastUnused
-	ZO_Clear(self.controls)
+	ZO_ClearTable(self.controls)
 end
 
 function TileDisplay:OnDiscoveryStatusChanged(unitX, unitY)
 	local discoveryData = self.discoveryData
-	local index, anyDiscovered, allDiscovered
+	local index, anyDiscovered, allDiscovered, control
 	local composite = self.composite
 	local topRow = {}
 	local currentRow = {}
@@ -134,10 +142,12 @@ function TileDisplay:OnDiscoveryStatusChanged(unitX, unitY)
 			allDiscovered = currentRow[x] and currentRow[x-1] and topRow[x] and topRow[x-1]
 			composite:SetHidden(index + 1, not anyDiscovered)
 			if anyDiscovered and not allDiscovered then
-				-- todo update control rather than replacing them.
-				-- todo, how to retrieve controls?
-				self:GetControl(x, y)
+				composite:SetSurfaceHidden(index + 1, true)
+				control = self:GetControl(x, y)
 				self:RefreshControlForDiscoveryStatus(control, currentRow[x], currentRow[x-1], topRow[x], topRow[x-1])
+			else
+				composite:SetSurfaceHidden(index + 1, false)
+				composite:SetColor(index + 1, unpack((allDiscovered and discoveredColor) or undiscoveredColor))
 			end
 		end
 		topRow, currentRow = currentRow, topRow
@@ -150,7 +160,7 @@ function TileDisplay:Refresh()
 	local discoveredColor = self.discoveredColor
 	local undiscoveredColor = self.undiscoveredColor
 	local discoveryData = self.discoveryData
-	local index, anyDiscovered, allDiscovered
+	local index, anyDiscovered, allDiscovered, control
 	local composite = self.composite
 	local topRow = {}
 	local currentRow = {}
@@ -162,11 +172,12 @@ function TileDisplay:Refresh()
 			anyDiscovered = currentRow[x] or currentRow[x-1] or topRow[x] or topRow[x-1]
 			allDiscovered = currentRow[x] and currentRow[x-1] and topRow[x] and topRow[x-1]
 			if anyDiscovered and not allDiscovered then
-				composite:SetHidden(index + 1, true)
-				self:GetNewControl(x, y)
+				--d(x,y)
+				composite:SetSurfaceHidden(index + 1, true)
+				control = self:GetControl(x, y)
 				self:RefreshControlForDiscoveryStatus(control, currentRow[x], currentRow[x-1], topRow[x], topRow[x-1])
 			else
-				composite:SetHidden(index + 1, false)
+				composite:SetSurfaceHidden(index + 1, false)
 				composite:SetColor(index + 1, unpack((allDiscovered and discoveredColor) or undiscoveredColor))
 			end
 		end
@@ -177,7 +188,8 @@ end
 function TileDisplay:RefreshControlForDiscoveryStatus(control, center, left, top, topleft)
 	local discoveredColor = self.discoveredColor
 	local hiddenColor = self.undiscoveredColor
-	control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT, 
+	
+	control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT, --1, 0, 0, 1)
 		unpack(center and discoveredColor or hiddenColor))
 	-- color of the tile's neigbors for gradient effect
 	control:SetVertexColors(VERTEX_POINTS_BOTTOMLEFT,
@@ -191,18 +203,7 @@ end
 function TileDisplay:SetColors(discoveredColor, undiscoveredColor)
 	self.discoveredColor = discoveredColor
 	self.undiscoveredColor = undiscoveredColor
-	self.hiddenColor:SetColor(unpack(undiscoveredColor))
-	self:Refresh()
+	--self.hiddenColor:SetColor(unpack(undiscoveredColor))
+	--self:Refresh()
 end
 
--- set every corner of this tile's texture as undiscovered (needed during the map opening/closing animation)
-function MapTile:SetUndiscovered()
-	self.parent:SetHidden(true)
-	self.hideAllControl:SetHidden(false)
-end
-
--- set all tiles as hidden (so the entire map becomes visible)
-function MapTile:HideTiles()
-	self.parent:SetHidden(true)
-	self.hideAllControl:SetHidden(true)
-end

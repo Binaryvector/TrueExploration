@@ -4,23 +4,23 @@ end
 local TrueExplor = _G["TrueExplor"]
 
 -- settings
-TrueExplor.radiusForMapSize = {
-	[768] = 3, --dungeon
-	[1280] = 2, --city
-	[1536] = 1, --starter island, larger cities
-	[2048] = 0, --zones
-	[5120] = 0,--96, -- cyrodiil (more than 50 panels will result in too much lag)
-}
 TrueExplor.total_units = 48
 
 local defaultSettings = {
-	discoveredColor = { 1, 1, 1, 0 } -- rgba format
-	undiscoveredColor = { 1, 1, 1, 1 }
+	discoveredColor = { 1, 1, 1, 0 }, -- rgba format
+	undiscoveredColor = { 1, 1, 1, 1 },
 	dontHideMapTypes = {
 		--MAPTYPE_SUBZONE, --cities but some dungeons as well
 		[MAPTYPE_COSMIC] = true,
 		[MAPTYPE_WORLD] = true,
 	},
+	radiusForMapSize = {
+		[768] = 3, --dungeon
+		[1280] = 2, --city
+		[1536] = 1, --starter island, larger cities
+		[2048] = 0, --zones
+		[5120] = 0,--96, -- cyrodiil (more than 50 panels will result in too much lag)
+	}
 }
 
 --internal stuff
@@ -48,7 +48,7 @@ function TrueExplor:RefreshRadius()
 		local mapSize = tileSize * numTiles
 		local smallestSize = math.huge
 		local r
-		for size, radius in pairs(TrueExplor.radiusForMapSize) do
+		for size, radius in pairs(self.settings.radiusForMapSize) do
 			if size < smallestSize and size >= mapSize then
 				smallestSize = size
 				r = radius
@@ -63,33 +63,42 @@ end
 function TrueExplor:Refresh()
 	if not (ZO_WorldMapContainer1 and ZO_WorldMapContainer1:IsTextureLoaded()) then
 		self.needUpdate = true
-		return
+			return
 	end
 	self:RefreshRadius()
-	local mapId = GetMapIdByIndex(GetMapIndex())
+	local mapId = GetCurrentMapId()
 	local discoveryData = self:GetDiscoveryDataForMapId(mapId)
+	assert(discoveryData)
 	self.tileDisplay:SetDiscoveryData(discoveryData)
+	self.tileDisplay:Refresh()
 end
 
 function TrueExplor:GetDiscoveryDataForMapId(mapId)
-	local loadedData = self.loadedData[mapId]
-	if not loadedData then
-		local data = self.save[mapId]
+	local discoveryData = self.loadedData[mapId]
+	if not discoveryData then
+		local data = self.maps[mapId]
 		if not data then
-			data = self.save[GetMapTileTexture()] or {}
-			self.save[GetMapTileTexture()] = nil
-			self.save[mapId] = data
+			data = self.maps[GetMapTileTexture()] or {}
+			self.maps[GetMapTileTexture()] = nil
+			self.maps[mapId] = data
 		end
-		self.loadedData[mapId] = self.discoveryData:Load(data)
+		discoveryData = self.discoveryData:Load(data)
+		self.loadedData[mapId] = discoveryData
 	end
+	return discoveryData
+end
+
+function TrueExplor:DiscoverForMapId(tileX, tileY, mapId)
+	local discoveryData = self:GetDiscoveryDataForMapId(mapId)
+	discoveryData:Discover(tileX, tileY)
 end
 
 function TrueExplor:BuildHierarchy()
-	local lastMapId = GetMapIdByIndex(GetMapIndex())
+	local lastMapId = GetCurrentMapId()
 	local newParentMapId
 	
 	while (MapZoomOut() == SET_MAP_RESULT_MAP_CHANGED) do
-		newParentMapId = GetMapIdByIndex(GetMapIndex())
+		newParentMapId = GetCurrentMapId()
 		if lastMapId == newParentMapId then
 			break
 		end
@@ -99,11 +108,11 @@ function TrueExplor:BuildHierarchy()
 end
 
 function TrueExplor:DiscoverCurrentLocation()
-	local originalMapIndex = GetMapIndex()
+	local originalMapId = GetCurrentMapId()
 	SetMapToPlayerLocation()
 	
 	self:BuildHierarchy()
-	local mapId = GetMapIdByIndex(GetMapIndex())
+	local mapId = GetCurrentMapId()
 	local parentMapId = self.hierarchy[mapId]
 	if not parentMapId then
 		self:BuildHierarchy()
@@ -115,17 +124,20 @@ function TrueExplor:DiscoverCurrentLocation()
 	local discoveredTileY = zo_floor(y * TrueExplor.total_units)
 	
 	local offsetX, offsetY, scaleX, scaleY = GetUniversallyNormalizedMapInfo(mapId)
+	
 	local globalX = x * scaleX + offsetX
 	local globalY = y * scaleY + offsetY
 	
 	local tileX, tileY
 	local wasAnyChanged, wasChanged
+	--d(mapId)
 	while mapId do
 		--d("uncover " .. mapName)
 		offsetX, offsetY, scaleX, scaleY = GetUniversallyNormalizedMapInfo(mapId)
 		-- get local coords
 		x = (globalX - offsetX) / scaleX
 		y = (globalY - offsetY) / scaleY
+		--d(x,y)
 		-- get tile coords
 		tileX = zo_floor(x * TrueExplor.total_units)
 		tileY = zo_floor(y * TrueExplor.total_units)
@@ -137,9 +149,11 @@ function TrueExplor:DiscoverCurrentLocation()
 		wasAnyChanged = true
 		-- get parent map and repeat
 		mapId = self.hierarchy[mapId]
+		--d(mapId == nil)
+		--d(self.hierarchy[mapId])
 	end
 	
-	if originalMapIndex ~= GetMapIndex() then
+	if originalMapId ~= GetCurrentMapId() then
 		CALLBACK_MANAGER:FireCallbacks("OnWorldMapChanged")
 	elseif wasAnyChanged then
 		if AUI_MapContainer or WORLD_MAP_FRAGMENT:IsShowing() then
@@ -151,15 +165,16 @@ end
 function TrueExplor:Initialize()
 	-- load save files
 	self.save = ZO_SavedVars:New("TE_SavedVars", 1, "save", { maps = {} })
-	self.settings = ZO_SavedVars:New("TE_SavedVars", 1, "save", self.defaultSettings)
+	self.maps = self.save.maps
+	self.settings = ZO_SavedVars:New("TE_SavedVars", 1, "save", defaultSettings)
 	
 	self.hierarchy = {}
-	
+	self.loadedData = {}
 	-- initialize options menu (see TrueExplorationOptions.lua)
 	--TrueExplor.setupOptions()
 	--self.settingsMenu:Initialize()
-	self.tileDisplay:Initialize(ZO_WorldMapContainer, self.settings.radius)
-	
+	self.tileDisplay:Initialize(ZO_WorldMapContainer, 0)--self.settings.radius)
+	self.tileDisplay:SetColors(self.settings.discoveredColor, self.settings.undiscoveredColor)
 	-- add debug chat commands
 	SLASH_COMMANDS["/tedebug"] = TrueExplor.Debug
 	SLASH_COMMANDS["/discover"] = TrueExplor.DiscoverAll
@@ -191,24 +206,27 @@ function TrueExplor:Initialize()
 	mapscene:RegisterCallback("StateChange", callback)
 	mapscene = SCENE_MANAGER:GetScene("gamepad_worldMap")
 	mapscene:RegisterCallback("StateChange", callback)
-	
+	----[[
 	EVENT_MANAGER:RegisterForUpdate("TrueExploration", UPDATE_DELAY_IN_MS, function()
 		if TrueExplor.needUpdate then
 			if ZO_WorldMapContainer1 and ZO_WorldMapContainer1:IsTextureLoaded() then
+				TrueExplor.needUpdate = false
 				TrueExplor:Refresh()
 			else
 				return
 			end
 		end
 		
+		if ZO_WorldMap_IsWorldMapShowing() then return end
+		
 		TrueExplor:DiscoverCurrentLocation()
 	end)
-	
+	--]]--
 	-- add zoom function for the tiles. when the map is zoomed into, the tiles need to scale as well
 	local oldDimensions = ZO_WorldMapContainer.SetDimensions
 	ZO_PreHook(ZO_WorldMapContainer, "SetDimensions", function(container, width, height, ...)
 		if self.tileDisplay.container == container then
-			self.tileDisplay:UpdateSize()
+			self.tileDisplay:UpdateSize(width, height)
 		end
 	end)
 	

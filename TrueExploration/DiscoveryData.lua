@@ -1,7 +1,7 @@
 
 local DiscoveryData = ZO_Object:Subclass()
 TrueExplor = TrueExplor or {}
-TrueExplor.DiscoveryData = DiscoveryData
+TrueExplor.discoveryData = DiscoveryData
 
 local BITS = 7
 
@@ -48,7 +48,7 @@ function DiscoveryData:Discover(x, y)
 		local unitId = (y * TrueExplor.total_units + x)
 		local num = zo_floor(unitId / TrueExplor.unitsPerNumber)
 		local bit = zo_mod(unitId, TrueExplor.unitsPerNumber)
-		self[y] = (self[y] or 0) + (2^bit)
+		self[num] = (self[num] or 0) + (2^bit)
 	end
 	return hasChanged
 end
@@ -65,12 +65,14 @@ function DiscoveryData:IsDiscovered(x, y)
 	return false
 end
 
-function DiscoveryData:IsAnyDiscoveredInRadius(centerX, centerY, radius)
-	local x = centerX
-	for y = centerY - radius, centerY + radius do
-		local unit = x + y * TrueExplor.total_units
-		local i = unit % BITS
-		local j = zo_floor(unit / BITS)
-		byte1, byte2 = self.byteString:byte((unit - radius) % BITS, (unit + radius) % BITS)
-		
+function DiscoveryData:IsAnyDiscoveredInRadius(x, y, radius)
+	local num, bit
+	for i = x - radius, x + radius do
+		for j = y - radius, y + radius do
+			if self:IsDiscovered(i, j) then
+				return true
+			end
+		end
+	end
+	return false
 end

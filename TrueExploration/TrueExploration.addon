@@ -4,7 +4,7 @@
 ## AddOnVersion: 111
 ## Author: Shinni
 ## SavedVariables: TE_SavedVars
-## ConsoleDependsOn: LibAddonMenu-2.0
+## ConsoleDependsOn: 
 ## PCDependsOn: LibAddonMenu-2.0
 ## OptionalDependsOn: AUI LibDebugLogger
 
