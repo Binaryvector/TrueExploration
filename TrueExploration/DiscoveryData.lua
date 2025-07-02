@@ -5,16 +5,16 @@ TrueExplor.discoveryData = DiscoveryData
 
 local BITS = 7
 
+
 function DiscoveryData:Load(data)
 	setmetatable(data, self)
 	return data
 end
 
-function DiscoveryData:New( ... )
-	local result = {}
-	setmetatable(result, self)
-	result:Initialize( ... )
-	return result
+function DiscoveryData:PreFill(data, mapId)
+	setmetatable(data, self)
+	data:Initialize(mapId)
+	return data
 end
 
 DiscoveryData.validPinTypes = {
@@ -75,7 +75,7 @@ function DiscoveryData:IsCompletelyDiscovered()
 end
 
 function DiscoveryData:SetCompletelyDiscovered(isDicovered)
-	isDiscover = not not isDiscover -- force boolean because this is serialized
+	isDicovered = not not isDicovered -- force boolean because this is serialized
 	self.discovered = isDicovered
 end
 

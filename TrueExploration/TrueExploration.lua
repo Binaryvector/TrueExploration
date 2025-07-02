@@ -5,7 +5,7 @@ TrueExplor = TrueExplor or {}
 TrueExplor.total_units = 48
 
 TrueExplor.defaultSettings = {
-	retroactive = true,
+	retroactive = false,
 	discoveredColor = { 1, 1, 1, 0 }, -- rgba format
 	undiscoveredColor = { 1, 1, 1, 1 },
 	dontHideMapTypes = {
@@ -25,7 +25,7 @@ TrueExplor.defaultSettings = {
 --internal stuff
 TrueExplor.radius = 1
 TrueExplor.dataVersion = 1
-local UPDATE_DELAY_IN_MS = 1000 --num of milliseconds until addon tries to discover current position
+local UPDATE_DELAY_IN_MS = 500 --num of milliseconds until addon tries to discover current position
 -- to prevent the save file from bloating up, i save the discovered flag from multiple units as bits in a large integer.
 TrueExplor.unitsPerNumber = 31 --number of units to be saved in one integer
 -- eso can't save integers larger than 2^31 (or they'll become floats and i lose the lsb information)
@@ -75,6 +75,7 @@ function TrueExplor:Refresh()
 	end
 	self:RefreshRadius()
 	local mapId = GetCurrentMapId()
+	
 	local discoveryData = self:GetDiscoveryDataForMapId(mapId)
 	assert(discoveryData)
 	self.tileDisplay:SetDiscoveryData(discoveryData)
@@ -88,7 +89,7 @@ TrueExplor.delay = function()
 	end
 end
 
-function TrueExplor:GetDiscoveryDataForMapId(mapId)
+function TrueExplor:GetDiscoveryDataForMapId(mapId, empty)
 	local discoveryData = self.loadedData[mapId]
 	if not discoveryData then
 		local data = self.maps[mapId]
@@ -96,11 +97,18 @@ function TrueExplor:GetDiscoveryDataForMapId(mapId)
 			data = self.maps[GetMapTileTexture()]
 			self.maps[GetMapTileTexture()] = nil
 		end
-		if not data then
-			data = self.discoveryData:New(mapId)
+		if data then
+			discoveryData = self.discoveryData:Load(data)
+		else
+			data = {}
+			if empty == nil then empty = not self.settings.retroactive end
+			if empty then
+				discoveryData = self.discoveryData:Load(data)
+			else
+				discoveryData = self.discoveryData:PreFill(data, mapId)
+			end
 		end
 		self.maps[mapId] = data
-		discoveryData = self.discoveryData:New(mapId)--Load(data)
 		self.loadedData[mapId] = discoveryData
 	end
 	return discoveryData
@@ -129,7 +137,6 @@ function TrueExplor:DiscoverCurrentLocation()
 	local originalMapId = GetCurrentMapId()
 	SetMapToPlayerLocation()
 	
-	self:BuildHierarchy()
 	local mapId = GetCurrentMapId()
 	local parentMapId = self.hierarchy[mapId]
 	if not parentMapId then
@@ -181,12 +188,12 @@ function TrueExplor:SetCompletelyDiscoverForCurrentMap(isDiscover)
 		d("Please open the worldmap.")
 		return
 	end
-	local dicoveryData = self:GetDiscoveryDataForMapId(GetCurrentMapId())
+	local discoveryData = self:GetDiscoveryDataForMapId(GetCurrentMapId())
 	discoveryData:SetCompletelyDiscovered(isDiscover)
 	self:Refresh()
 end
 
-function TrueExplor:ClearDataForCurrentMap()
+function TrueExplor:ClearDataForCurrentMap(isEmpty)
 	if not ZO_WorldMap_IsWorldMapShowing() then
 		d("Please open the worldmap.")
 		return
@@ -195,14 +202,19 @@ function TrueExplor:ClearDataForCurrentMap()
 	local mapId = GetCurrentMapId()
 	self.loadedData[mapId] = nil
 	self.maps[mapId] = nil
+	self:GetDiscoveryDataForMapId(mapId, not not isEmpty)
 	self:Refresh()
 end
 
 function TrueExplor:SetDebugEnabled(isEnabled)
-	self.isEnabled = isEnabled
+	self.isDebugEnabled = isEnabled
 	if isEnabled then
 		
 	end
+end
+
+function TrueExplor:IsDebugEnabled(isEnabled)
+	return self.isDebugEnabled
 end
 
 function TrueExplor:Initialize()
@@ -213,9 +225,10 @@ function TrueExplor:Initialize()
 	
 	self.hierarchy = {}
 	self.loadedData = {}
-	self.debug = false
+	self.isDebugEnabled = false
 	-- initialize options menu (see TrueExplorationOptions.lua)
 	TrueExplor.menu:Initialize()
+	TrueExplor.filterMenu:Initialize()
 	--self.settingsMenu:Initialize()
 	self.tileDisplay:Initialize(ZO_WorldMapContainer, 0)--self.settings.radius)
 	self.tileDisplay:SetColors(self.settings.discoveredColor, self.settings.undiscoveredColor)
@@ -238,9 +251,8 @@ function TrueExplor:Initialize()
 		if(newState == SCENE_SHOWING) then
 			if AUI_MapContainer then
 				self.tileDisplay:SetContainer(ZO_WorldMapContainer)
-				self.tileDisplay:Refresh()
 			end
-			--TrueExplor.RefreshTiles()
+			self.tileDisplay:Refresh()
 		elseif newState == SCENE_HIDING then
 			if AUI_MapContainer then
 				self.tileDisplay:SetContainer(AUI_MapContainer)

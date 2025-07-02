@@ -3,10 +3,14 @@ TrueExplor = TrueExplor or {}
 TrueExplor.lang = TrueExplor.lang or {}
 
 local language = {
+	empty = "Fully Hidden",
+	filled = "Discover near POI",
+	newMapTitle = "Start fully hidden?",
+	newMapBody = "Do you want to start with a completely hidden map?\nOr should areas near completed point of interests (quests, wayshrines, etc.) be discovered?",
 	debugCheckbox = "TrueExploration Debug Mode",
 	clearTitle = "Confirm Deletion",
 	clearBody = "Do you want to delete exploration data for this map?\nDeletion can NOT be reverted.",
-	clearMap = "Delete map exploration"
+	clearMap = "Reset map exploration",
 	discoverMap = "Discover entire map",
 	retroactive = "Guess explored areas",
 	retroactiveDec = "The Add-On cannot know which areas your explored before the Add-On was installed.\n- If this setting is enabled, the Add-On will uncover areas near completed quests, skyshards, wayshrines, etc.\n- If this setting is disabled, all maps will start as completely undiscovered (hidden).",

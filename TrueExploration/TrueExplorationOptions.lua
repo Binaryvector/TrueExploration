@@ -33,10 +33,11 @@ function Menu:Initialize()
 	local lang = TrueExplor.lang
 	
 	local optionsTable = setmetatable({}, { __index = table })
+	--[[
 	optionsTable:insert({
 		type = "checkbox",
 		name = lang.retroactive,
-		--tooltip = lang.zoneDesc,
+		tooltip = lang.retroactiveDec,
 		getFunc = function() return TrueExplor.settings.retroactive end,
 		setFunc = function(value)
 			TrueExplor.settings.retroactive = value
@@ -45,6 +46,7 @@ function Menu:Initialize()
 		width = "half",	--or "half" (optional)
 		default = true,
 	})
+	]]--
 	optionsTable:insert({
 			type = "description",
 		title = lang.chatCommands,
@@ -144,7 +146,7 @@ function Menu:Initialize()
 		default = 255,
 	})
 
-	if LibAddonMenu2 then
+	if not IsConsoleUI() then
 		LibAddonMenu2:RegisterAddonPanel("TrueExplorationOptions", panelData)
 		LibAddonMenu2:RegisterOptionControls("TrueExplorationOptions", optionsTable)
 	else
