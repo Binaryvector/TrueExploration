@@ -11,13 +11,72 @@ function DiscoveryData:Load(data)
 end
 
 function DiscoveryData:New( ... )
-	local result = ZO_Object.New(self)
+	local result = {}
+	setmetatable(result, self)
 	result:Initialize( ... )
 	return result
 end
 
-function DiscoveryData:Initialize()
+DiscoveryData.validPinTypes = {
+	[MAP_PIN_TYPE_POI_SUGGESTED] = true,
+	[MAP_PIN_TYPE_POI_SEEN] = true,
+	[MAP_PIN_TYPE_POI_COMPLETE] = true,
+	[MAP_PIN_TYPE_SKYSHARD_SEEN] = true,
+	[MAP_PIN_TYPE_SKYSHARD_SUGGESTED] = true,
+	[MAP_PIN_TYPE_SKYSHARD_COMPLETE] = true,
+	[MAP_PIN_TYPE_FAST_TRAVEL_WAYSHRINE] = true,
+	[MAP_PIN_TYPE_FAST_TRAVEL_WAYSHRINE_CURRENT_LOC] = true,
+}
+
+function DiscoveryData:Initialize(mapId)
+	local currentMapId = GetCurrentMapId()
+	SetMapToMapId(mapId)
+	local units = TrueExplor.total_units
+	local zoneIndex = GetCurrentMapZoneIndex()
+	local numPOI = GetNumPOIs(zoneIndex)
+	local POIsX = {}
+	local POIsY = {}
+	local POIdiscovered = {}
+	local numValidPOI = 0
+	for poiIndex = 1, numPOI do
+		local x, y, poiPinType, icon, isShownInCurrentMap, linkedCollectibleIsLocked, isDiscovered, isNearby = GetPOIMapInfo(zoneIndex, poiIndex)
+		if isShownInCurrentMap and self.validPinTypes[poiPinType] then
+			numValidPOI = numValidPOI + 1
+			POIsX[numValidPOI] = x * units
+			POIsY[numValidPOI] = y * units
+			POIdiscovered[numValidPOI] = isDiscovered
+		end
+	end
 	
+	local smallestDist, dx, dy, dist, closestPOI
+	for x = 0, units-1 do
+		for y = 0, units-1 do
+			smallestDist = math.huge
+			for i = 1, numValidPOI do
+				dx = x - POIsX[i]
+				dy = y - POIsY[i]
+				dist = dx * dx + dy * dy
+				if dist < smallestDist then
+					smallestDist = dist
+					closestPOI = i
+				end
+			end
+			if POIdiscovered[closestPOI] then
+				self:Discover(x, y)
+			end
+		end
+	end
+	
+	SetMapToMapId(currentMapId)
+end
+
+function DiscoveryData:IsCompletelyDiscovered()
+	return self.discovered
+end
+
+function DiscoveryData:SetCompletelyDiscovered(isDicovered)
+	isDiscover = not not isDiscover -- force boolean because this is serialized
+	self.discovered = isDicovered
 end
 
 function DiscoveryData:UndiscoverInRadius(x, y, radius)

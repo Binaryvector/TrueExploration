@@ -4,7 +4,7 @@
 ## AddOnVersion: 111
 ## Author: Shinni
 ## SavedVariables: TE_SavedVars
-## ConsoleDependsOn: 
+## ConsoleDependsOn: LibHarvensAddonSettings
 ## PCDependsOn: LibAddonMenu-2.0
 ## OptionalDependsOn: AUI LibDebugLogger
 
@@ -15,4 +15,4 @@ TrueExploration.xml
 TrueExploration.lua
 TileDisplay.lua
 DiscoveryData.lua
-##TrueExplorationOptions.lua
+TrueExplorationOptions.lua

@@ -1,7 +1,6 @@
-if not TrueExplor then
-	TrueExplor = {}
-	TrueExplor.lang = TrueExplor.lang or {}
-end
+
+TrueExplor = TrueExplor or {}
+TrueExplor.lang = TrueExplor.lang or {}
 
 local language = {
 	chatCommands = "Chat Commands",

@@ -1,192 +1,136 @@
-function TrueExplor.setupOptions()
-	
+
+local Menu = {}
+TrueExplor = TrueExplor or {}
+TrueExplor.menu = Menu
+
+function Menu:LoadAddonInfo(addonName)
 	local AddOnManager = GetAddOnManager()
 	local displayVersion = ""
 	for addonIndex = 1, AddOnManager:GetNumAddOns() do
-		local name = AddOnManager:GetAddOnInfo(addonIndex)
-		if name == "TrueExploration" then
+		local name, title, author = AddOnManager:GetAddOnInfo(addonIndex)
+		if name == addonName then
 			local versionInt = AddOnManager:GetAddOnVersion(addonIndex)
 			local rev = versionInt % 100
 			local version = zo_floor(versionInt / 100) % 100
-			displayVersion = string.format("%d.%d", version, rev)
+			self.displayVersion = string.format("%d.%d", version, rev)
+			self.author = author
+			self.displayName = title
 		end
 	end
+end
+
+function Menu:Initialize()
+	self:LoadAddonInfo("TrueExploration")
 	
 	local panelData = {
 		type = "panel",
-		name = "TrueExploration",
-		author = "Shinni",
-		version = displayVersion,
+		name = self.displayName,
+		author = self.author,
+		version = self.displayVersion,
 		registerForDefaults = true,
 	}
 	
 	local lang = TrueExplor.lang
 	
-	local optionsTable = {
-		--{
-		--	type = "button",
-		--	name = "Replace with pre 1.3 data",
-		--	tooltip = "Resets the Addon with the data from before the 1.3 patch.",
-		--	func = function()
-		--		TE_SavedVars["Default"][GetDisplayName()] = TE_SavedVars["Default"][""]
-		--		ReloadUI("ingame")
-		--	end,
-		--	width = "full",	--or "half" (optional)
-		--	warning = "Will Reload UI. This process will replace the data and is irreversible!",	--(optional)
-		--},
-		{
+	local optionsTable = setmetatable({}, { __index = table })
+	optionsTable:insert({
 			type = "description",
-			title = lang.chatCommands,
-			text = lang.chatCommandsDesc,
-			width = "full"
-		},
-		{
-			type = "header",
-			name = lang.radiusSetting,
-			width = "full",	--or "half" (optional)
-		},
-		--[[
-		[2] = {
-			type = "dropdown",
-			name = "Number of tiles",
-			tooltip = "Number of divisions in with and height direction of the map.",
-			choices = {16, 24, 48, 72, 96},
-			getFunc = function() return TrueExplor.units end,
-			setFunc = function(var) TrueExplor.units = var end,
-			width = "full",
-			warning = "You already discovered data is only compatible to its own 'Number of Tiles' setting.\n"..
-			"Changing this value will clear the maps, but changing it back to the previous setting will show your previous discoveries again.\n"..
-			"This value greatly influences the filesize and the performance while the map is viewed!",
-		default = 48,
-		},
-		--]]
-		{
+		title = lang.chatCommands,
+		text = lang.chatCommandsDesc,
+		width = "full"
+	})
+	optionsTable:insert({
+		type = "header",
+		name = lang.radiusSetting,
+		width = "full",	--or "half" (optional)
+	})
+	
+	local mapTypes = { "dungeon", "town", "island", "zone", "cyrodiil" }
+	local mapSizes = {  768,       1280,   1536,     2048,   5120     }
+	for i, mapType in pairs(mapTypes) do
+		local size = mapSizes[i]
+		optionsTable:insert({
 			type = "slider",
-			name = lang.dungeonRadius,
-			tooltip = lang.dungeonRadiusDesc,
+			name = lang[mapType .. "Radius"],
+			tooltip = lang[mapType .. "RadiusDesc"],
 			min = 1,
 			max = 16,
 			step = 1,
-			getFunc = function() return TrueExplor.radius[768] end,
-			setFunc = function(value) TrueExplor.radius[768] = value end,
-			width = "half",
-			default = 4,
-		},
-		{
-			type = "slider",
-			name = lang.townRadius,
-			tooltip = lang.townRadiusDesc,
-			min = 1,
-			max = 16,
-			step = 1,
-			getFunc = function() return TrueExplor.radius[1280] end,
-			setFunc = function(value) TrueExplor.radius[1280] = value end,
-			width = "half",
-			default = 3,
-		},
-		{
-			type = "slider",
-			name = lang.islandRadius,
-			tooltip = lang.islandRadiusDesc,
-			min = 1,
-			max = 16,
-			step = 1,
-			getFunc = function() return TrueExplor.radius[1536] end,
-			setFunc = function(value) TrueExplor.radius[1536] = value end,
-			width = "half",
-			default = 2,
-		},
-		{
-			type = "slider",
-			name = lang.zoneRadius,
-			tooltip = lang.zoneRadiusDesc,
-			min = 1,
-			max = 16,
-			step = 1,
-			getFunc = function() return TrueExplor.radius[2048] end,
-			setFunc = function(value) TrueExplor.radius[2048] = value end,
-			width = "half",
-			default = 1,
-		},
-		{
-			type = "slider",
-			name = lang.cyrodiilRadius,
-			tooltip = lang.cyrodiilRadiusDesc,
-			min = 1,
-			max = 16,
-			step = 1,
-			getFunc = function() return TrueExplor.radius[5120] end,
-			setFunc = function(value) TrueExplor.radius[5120] = value end,
-			width = "half",
-			default = 1,
-		},
-		{
-			type = "header",
-			name = lang.mapTypes,
-			width = "full",	--or "half" (optional)
-		},
-		{
-			type = "checkbox",
-			name = lang.zone,
-			tooltip = lang.zoneDesc,
-			getFunc = function() return not TrueExplor.contains(TrueExplor.dontHideMapTypes, MAPTYPE_ZONE) end,
+			getFunc = function() return TrueExplor.settings.radiusForMapSize[size] end,
 			setFunc = function(value)
-				local key = TrueExplor.contains(TrueExplor.dontHideMapTypes, MAPTYPE_ZONE)
-				if value and key then
-				table.remove(TrueExplor.dontHideMapTypes, key)
-				elseif not key then
-				table.insert(TrueExplor.dontHideMapTypes, MAPTYPE_ZONE)
-				end
+				TrueExplor.settings.radiusForMapSize[size] = value
+				TrueExplor:Refresh()
 			end,
-			width = "half",	--or "half" (optional)
-			default = true,
-		},
-		{
+			width = "half",
+			default = TrueExplor.defaultSettings.radiusForMapSize[size],
+		})
+	end
+	
+	optionsTable:insert({
+		type = "header",
+		name = lang.mapTypes,
+		width = "full",	--or "half" (optional)
+	})
+		
+	optionsTable:insert({
 		type = "checkbox",
-			name = lang.subzone,
-			tooltip =  lang.subzoneDesc,
-			getFunc = function() return not TrueExplor.contains(TrueExplor.dontHideMapTypes, MAPTYPE_SUBZONE) end,
-			setFunc = function(value)
-				local key = TrueExplor.contains(TrueExplor.dontHideMapTypes, MAPTYPE_SUBZONE)
-				if value and key then
-				table.remove(TrueExplor.dontHideMapTypes, key)
-				elseif not key then
-				table.insert(TrueExplor.dontHideMapTypes, MAPTYPE_SUBZONE)
-				end
-			end,
-			width = "half",	--or "half" (optional)
-			default = true,
-		},
-		{
-			type = "header",
-			name = lang.graphicSettings,
-			width = "full",	--or "half" (optional)
-		},
-		{
-			type = "slider",
-			name = lang.discovered,
-			tooltip = lang.discoveredDesc,
-			min = 0,
-			max = 255,
-			step = 1,
-			getFunc = function() return zo_round(TrueExplor.discoveredColor[4] * 255) end,
-			setFunc = function(value) TrueExplor.discoveredColor[4] = value / 255 end,
-			width = "half",
-			default = 0,
-		},
-		{
-			type = "slider",
-			name = lang.undiscovered,
-			tooltip = lang.undiscoveredDesc,
-			min = 0,
-			max = 255,
-			step = 1,
-			getFunc = function() return zo_round(TrueExplor.undiscoveredColor[4] * 255) end,
-			setFunc = function(value) TrueExplor.undiscoveredColor[4] = value / 255 end,
-			width = "half",
-			default = 255,
-		},
-	}
+		name = lang.zone,
+		--tooltip = lang.zoneDesc,
+		getFunc = function() return not TrueExplor.settings.dontHideMapTypes[MAPTYPE_ZONE] end,
+		setFunc = function(value)
+			TrueExplor.settings.dontHideMapTypes[MAPTYPE_ZONE] = not value
+			TrueExplor:Refresh()
+		end,
+		width = "half",	--or "half" (optional)
+		default = true,
+	})
+	optionsTable:insert({
+		type = "checkbox",
+		name = lang.subzone,
+		--tooltip =  lang.subzoneDesc,
+		getFunc = function() return not TrueExplor.settings.dontHideMapTypes[MAPTYPE_SUBZONE] end,
+		setFunc = function(value)
+			TrueExplor.settings.dontHideMapTypes[MAPTYPE_SUBZONE] = not value
+			TrueExplor:Refresh()
+		end,
+		width = "half",	--or "half" (optional)
+		default = true,
+	})
+	optionsTable:insert({
+		type = "header",
+		name = lang.graphicSettings,
+		width = "full",	--or "half" (optional)
+	})
+	optionsTable:insert({
+		type = "slider",
+		name = lang.discovered,
+		tooltip = lang.discoveredDesc,
+		min = 0,
+		max = 255,
+		step = 1,
+		getFunc = function() return zo_round(TrueExplor.settings.discoveredColor[4] * 255) end,
+		setFunc = function(value) 
+			TrueExplor.settings.discoveredColor[4] = value / 255
+			TrueExplor:MarkForRefresh()
+		end,
+		width = "half",
+		default = 0,
+	})
+	optionsTable:insert({
+		type = "slider",
+		name = lang.undiscovered,
+		tooltip = lang.undiscoveredDesc,
+		min = 0,
+		max = 255,
+		step = 1,
+		getFunc = function() return zo_round(TrueExplor.settings.undiscoveredColor[4] * 255) end,
+		setFunc = function(value) 
+			TrueExplor.settings.undiscoveredColor[4] = value / 255
+			TruExplor:MarkForRefresh()
+		end,
+		width = "half",
+		default = 255,
+	})
 
 	if LibAddonMenu2 then
 		LibAddonMenu2:RegisterAddonPanel("TrueExplorationOptions", panelData)
@@ -197,13 +141,8 @@ function TrueExplor.setupOptions()
 			allowRefresh = true,
 		}
 		local settings = LibHarvensAddonSettings:AddAddon(panelData.name, options)
-		-- label panelData.version
-		
-		local label = {
-			type = LibHarvensAddonSettings.ST_LABEL,
-			label = "TrueExploration console version " .. ZO_HIGHLIGHT_TEXT:Colorize(panelData.version),
-		}
-		settings:AddSetting(label)
+		settings.author = panelData.author
+		settings.version = panelData.version
 		
 		local LAMtoHAS = {
 			slider = LibHarvensAddonSettings.ST_SLIDER,
@@ -218,13 +157,12 @@ function TrueExplor.setupOptions()
 					type = newType,
 					label = entry.name,
 					default = entry.default,
-					setFunction = entry.getFunc,
-					getFunction = entry.setFunc,
+					setFunction = entry.setFunc,
+					getFunction = entry.getFunc,
 					tooltip = entry.tooltip,
 					min = entry.min,
 					max = entry.max,
 					step = entry.step,
-					disable = function() return (LibNodeDetection == nil) end,
 				}
 				settings:AddSetting(newOption)
 			end
