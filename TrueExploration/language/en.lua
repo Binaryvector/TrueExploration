@@ -3,15 +3,22 @@ TrueExplor = TrueExplor or {}
 TrueExplor.lang = TrueExplor.lang or {}
 
 local language = {
-	chatCommands = "Chat Commands",
+	debugCheckbox = "TrueExploration Debug Mode",
+	clearTitle = "Confirm Deletion",
+	clearBody = "Do you want to delete exploration data for this map?\nDeletion can NOT be reverted.",
+	clearMap = "Delete map exploration"
+	discoverMap = "Discover entire map",
+	retroactive = "Guess explored areas",
+	retroactiveDec = "The Add-On cannot know which areas your explored before the Add-On was installed.\n- If this setting is enabled, the Add-On will uncover areas near completed quests, skyshards, wayshrines, etc.\n- If this setting is disabled, all maps will start as completely undiscovered (hidden).",
+	chatCommands = "Chat Commands (while map is open)",
 	chatCommandsDesc = "/discover, /undiscover, /clearmap, /tedebug [0,1]",
 	radiusSetting = "Radius Settings",
 	dungeonRadius = "Dungeon Radius",
-	dungeonRadiusDesc = "Number of tiles that can be discovered at once on a dungeon map (map size <= 768)",
+	dungeonRadiusDesc = "Number of tiles that can be discovered at once on a dungeon or delve map (map size <= 768)",
 	townRadius = "Town Radius",
 	townRadiusDesc = "Number of tiles that can be discovered at once on a town map (map size <= 1280)",
 	islandRadius = "Island Radius",
-	islandRadiusDesc = "Number of tiles that can be discovered at once on a island map (or large city) (map size <= 1536)",
+	islandRadiusDesc = "Number of tiles that can be discovered at once on an island map (or large city) (map size <= 1536)",
 	zoneRadius = "Zone Radius",
 	zoneRadiusDesc = "Number of tiles that can be discovered at once on a zone map (map size <= 2048)",
 	cyrodiilRadius = "Cyrodiil Radius",

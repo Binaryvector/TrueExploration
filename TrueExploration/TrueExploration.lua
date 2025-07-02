@@ -5,6 +5,7 @@ TrueExplor = TrueExplor or {}
 TrueExplor.total_units = 48
 
 TrueExplor.defaultSettings = {
+	retroactive = true,
 	discoveredColor = { 1, 1, 1, 0 }, -- rgba format
 	undiscoveredColor = { 1, 1, 1, 1 },
 	dontHideMapTypes = {
@@ -197,6 +198,13 @@ function TrueExplor:ClearDataForCurrentMap()
 	self:Refresh()
 end
 
+function TrueExplor:SetDebugEnabled(isEnabled)
+	self.isEnabled = isEnabled
+	if isEnabled then
+		
+	end
+end
+
 function TrueExplor:Initialize()
 	-- load save files
 	self.save = ZO_SavedVars:New("TE_SavedVars", 1, "save", { maps = {} })
@@ -205,15 +213,14 @@ function TrueExplor:Initialize()
 	
 	self.hierarchy = {}
 	self.loadedData = {}
+	self.debug = false
 	-- initialize options menu (see TrueExplorationOptions.lua)
 	TrueExplor.menu:Initialize()
 	--self.settingsMenu:Initialize()
 	self.tileDisplay:Initialize(ZO_WorldMapContainer, 0)--self.settings.radius)
 	self.tileDisplay:SetColors(self.settings.discoveredColor, self.settings.undiscoveredColor)
 	-- add debug chat commands
-	--SLASH_COMMANDS["/tedebug"] = TrueExplor.Debug -- TODO
-	-- TODO, add map filter/button for discovery
-	-- TODO, add map filter/button for discovery of nearby areas?
+	SLASH_COMMANDS["/tedebug"] = function(s) TrueExplor:SetDebugEnabled(tonumber(s)==1) end
 	SLASH_COMMANDS["/discover"] = function() TrueExplor:SetCompletelyDiscoverForCurrentMap(true) end
 	SLASH_COMMANDS["/undiscover"] = function() TrueExplor:SetCompletelyDiscoverForCurrentMap(false) end
 	SLASH_COMMANDS["/clearmap"] = function() TrueExplor:ClearDataForCurrentMap() end
@@ -239,6 +246,7 @@ function TrueExplor:Initialize()
 				self.tileDisplay:SetContainer(AUI_MapContainer)
 				self.tileDisplay:Refresh()
 			end
+			self:SetDebugEnabled(false)
 		end
 	end
 	local mapscene = SCENE_MANAGER:GetScene("worldMap")

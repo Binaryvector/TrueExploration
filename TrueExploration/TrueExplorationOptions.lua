@@ -34,6 +34,18 @@ function Menu:Initialize()
 	
 	local optionsTable = setmetatable({}, { __index = table })
 	optionsTable:insert({
+		type = "checkbox",
+		name = lang.retroactive,
+		--tooltip = lang.zoneDesc,
+		getFunc = function() return TrueExplor.settings.retroactive end,
+		setFunc = function(value)
+			TrueExplor.settings.retroactive = value
+			TrueExplor:Refresh()
+		end,
+		width = "half",	--or "half" (optional)
+		default = true,
+	})
+	optionsTable:insert({
 			type = "description",
 		title = lang.chatCommands,
 		text = lang.chatCommandsDesc,
