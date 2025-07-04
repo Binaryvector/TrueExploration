@@ -3,19 +3,23 @@ local TileDisplay = {}
 TrueExplor = TrueExplor or {}
 TrueExplor.tileDisplay = TileDisplay
 
+local TrueExplor = TrueExplor
+local zo_floor = zo_floor
+
 function TileDisplay:Initialize(container, radius)
+	self.total_units = TrueExplor.total_units
 	self.parent = container:CreateControl(nil, CT_CONTROL)
 	local composite = self.parent:CreateControl(nil, CT_TEXTURECOMPOSITE)
 	composite:SetDrawLevel(2)
 	composite:SetPixelRoundingEnabled(false)
 	composite:SetTexture("EsoUI/Art/WorldMap/worldmap_map_background_512tile.dds")
-	for y = 0, TrueExplor.total_units - 1 do
-		for x = 0, TrueExplor.total_units - 1 do
+	for y = 0, self.total_units - 1 do
+		for x = 0, self.total_units - 1 do
 			composite:AddSurface(
-				x / TrueExplor.total_units,
-				(x+1) / TrueExplor.total_units,
-				y / TrueExplor.total_units,
-				(y+1) / TrueExplor.total_units)
+				x / self.total_units,
+				(x+1) / self.total_units,
+				y / self.total_units,
+				(y+1) / self.total_units)
 		end
 	end
 	self.composite = composite
@@ -30,8 +34,19 @@ function TileDisplay:Initialize(container, radius)
 	self:SetContainer(container)
 end
 
+function TileDisplay:HideControl(x, y)
+	local unit = x + y * self.total_units
+	local control = self.controls[unit]
+	if not control then return end
+	
+	local lastUnused = self.lastUnused + 1
+	self.unusedControls[lastUnused] = control
+	self.controls[unit] = nil
+	control:SetHidden(true)
+end
+
 function TileDisplay:GetControl(x, y)
-	local unit = x + y * TrueExplor.total_units
+	local unit = x + y * self.total_units
 	local control = self.controls[unit]
 	if control then return control end
 	
@@ -43,14 +58,14 @@ function TileDisplay:GetControl(x, y)
 		control:SetPixelRoundingEnabled(false)
 	end
 	control:SetTextureCoords(
-		x / TrueExplor.total_units,
-		(x+1) / TrueExplor.total_units,
-		y / TrueExplor.total_units,
-		(y+1) / TrueExplor.total_units)
+		x / self.total_units,
+		(x+1) / self.total_units,
+		y / self.total_units,
+		(y+1) / self.total_units)
 	local container = self.container
 	local width, height = self.hideAllControl:GetDimensions()
-	local controlWidth = width / TrueExplor.total_units
-	local controlHeight = height / TrueExplor.total_units
+	local controlWidth = width / self.total_units
+	local controlHeight = height / self.total_units
 	control:SetAnchor(TOPLEFT, container, TOPLEFT, (x-0.5) * controlWidth, (y-0.5) * controlHeight)
 	control:SetDimensions(controlWidth, controlHeight)
 	control:SetHidden(false)
@@ -81,23 +96,28 @@ function TileDisplay:UpdateSize(width, height)
 	if not (width and height) then
 		width, height = container:GetDimensions()
 	end
+	local oldW, oldH = self.hideAllControl:GetDimensions()
+	if oldW == width and oldH == height then return end
+	
 	self.hideAllControl:SetDimensions(width, height)
-	local controlWidth = width / TrueExplor.total_units
-	local controlHeight = height / TrueExplor.total_units
+	local controlWidth = width / self.total_units
+	local controlHeight = height / self.total_units
 	local x, y
 	for index, control in pairs(self.controls) do
-		x = index % TrueExplor.total_units
-		y = zo_floor(index / TrueExplor.total_units)
+		x = index % self.total_units
+		y = zo_floor(index / self.total_units)
 		control:SetAnchor(TOPLEFT, container, TOPLEFT, (x-0.5) * controlWidth, (y-0.5) * controlHeight)
 		control:SetDimensions(controlWidth, controlHeight)
 	end
-	local index
+	local index = 0
+	local yHeight
 	local composite = self.composite
-	for y = 0, TrueExplor.total_units - 1 do
+	for y = 0, self.total_units - 1 do
+		yHeight = y * controlHeight
 		for x = 0, TrueExplor.total_units - 1 do
-			index = x + y * TrueExplor.total_units
-			composite:SetInsets(index + 1,
-				x * controlWidth, x * controlWidth, y * controlHeight, y * controlHeight)
+			index = index + 1 --x + y * TrueExplor.total_units
+			composite:SetInsets(index,
+				x * controlWidth, x * controlWidth, yHeight, yHeight)
 		end
 	end
 	composite:SetDimensions(controlWidth, controlHeight)
@@ -128,21 +148,21 @@ function TileDisplay:OnDiscoveryStatusChanged(unitX, unitY)
 	local undiscoveredColor = self.undiscoveredColor
 	
 	local startX = zo_max(0, unitX - self.radius)
-	local endX = zo_min(TrueExplor.total_units-1, unitX + self.radius + 1)
+	local endX = zo_min(self.total_units-1, unitX + self.radius + 1)
 	
 	if unitY - self.radius - 1 >= 0 then
 		local y = unitY - self.radius - 1
 		for x = startX - 1, endX do
-			index = x + y * TrueExplor.total_units
+			index = x + y * self.total_units
 			topRow[x] = discoveryData:IsAnyDiscoveredInRadius(x, y, radius)
 		end
 	end
 	
-	for y = zo_max(0, unitY - self.radius), zo_min(TrueExplor.total_units-1, unitY + self.radius + 1) do
+	for y = zo_max(0, unitY - self.radius), zo_min(self.total_units-1, unitY + self.radius + 1) do
 		
 		currentRow[startX - 1] = discoveryData:IsAnyDiscoveredInRadius(startX - 1, y, radius)
 		for x = startX, endX do
-			index = x + y * TrueExplor.total_units
+			index = x + y * self.total_units
 			currentRow[x] = discoveryData:IsAnyDiscoveredInRadius(x, y, radius)
 			anyDiscovered = currentRow[x] or currentRow[x-1] or topRow[x] or topRow[x-1]
 			allDiscovered = currentRow[x] and currentRow[x-1] and topRow[x] and topRow[x-1]
@@ -152,6 +172,7 @@ function TileDisplay:OnDiscoveryStatusChanged(unitX, unitY)
 				self:RefreshControlForDiscoveryStatus(control, currentRow[x], currentRow[x-1], topRow[x], topRow[x-1])
 			else
 				composite:SetSurfaceHidden(index + 1, false)
+				self:HideControl(x, y)
 				composite:SetColor(index + 1, unpack((allDiscovered and discoveredColor) or undiscoveredColor))
 			end
 		end
@@ -159,9 +180,10 @@ function TileDisplay:OnDiscoveryStatusChanged(unitX, unitY)
 	end
 end
 
-function TileDisplay:Refresh()
+--[[
+function TileDisplay:Refresh2()
 	self:RemoveAllControls()
-	if self.discoveryData:IsCompletelyDiscovered() then 
+	if not self.discoveryData or self.discoveryData:IsCompletelyDiscovered() then 
 		self:HideTiles()
 		return
 	end
@@ -174,10 +196,11 @@ function TileDisplay:Refresh()
 	local topRow = {}
 	local currentRow = {}
 	local radius = self.radius
-	for y = 0, TrueExplor.total_units - 1 do
-		for x = 0, TrueExplor.total_units - 1 do
-			index = x + y * TrueExplor.total_units
-			currentRow[x] = discoveryData:IsAnyDiscoveredInRadius(x, y, radius)
+	local IsAnyDiscoveredInRadius = discoveryData.IsAnyDiscoveredInRadius
+	for y = 0, self.total_units - 1 do
+		for x = 0, self.total_units - 1 do
+			index = x + y * self.total_units
+			currentRow[x] = IsAnyDiscoveredInRadius(discoveryData, x, y, radius)
 			anyDiscovered = currentRow[x] or currentRow[x-1] or topRow[x] or topRow[x-1]
 			allDiscovered = currentRow[x] and currentRow[x-1] and topRow[x] and topRow[x-1]
 			if anyDiscovered and not allDiscovered then
@@ -190,6 +213,61 @@ function TileDisplay:Refresh()
 			end
 		end
 		topRow, currentRow = currentRow, topRow
+	end
+end]]--
+
+function TileDisplay:Refresh()
+	self:RemoveAllControls()
+	if not self.discoveryData or self.discoveryData:IsCompletelyDiscovered() then 
+		self:HideTiles()
+		return
+	end
+	self.parent:SetHidden(false)
+	local discoveredColor = self.discoveredColor
+	local undiscoveredColor = self.undiscoveredColor
+	local anyDiscovered, allDiscovered, control
+	local composite = self.composite
+	local index = 0
+	local topRow = {}
+	local currentRow = {}
+	local total_units = self.total_units
+	self:FillTableWithNumDiscoveriesInRow(topRow, -1)
+	
+	local currentRow = {}
+	for y = 0, total_units - 1 do
+		self:FillTableWithNumDiscoveriesInRow(currentRow, y)
+		for x = 0, total_units - 1 do
+			index = index + 1
+			assert(currentRow[x]>=0)
+			-- using boolean algebra: + is OR, * is AND
+			-- we're asking if any of the 4 adjacent tiles has a discovery
+			anyDiscovered = (currentRow[x] + currentRow[x-1] + topRow[x] + topRow[x-1]) ~= 0
+			-- we're asking if all of the 4 adjacent tiles has a discovery
+			allDiscovered = (currentRow[x] * currentRow[x-1] * topRow[x] * topRow[x-1]) ~= 0
+			if anyDiscovered and not allDiscovered then
+				composite:SetSurfaceHidden(index, true)
+				control = self:GetControl(x, y)
+				self:RefreshControlForDiscoveryStatus(control, 
+					currentRow[x] ~= 0, currentRow[x-1] ~= 0, topRow[x] ~= 0, topRow[x-1] ~= 0)
+			else
+				composite:SetSurfaceHidden(index, false)
+				composite:SetColor(index, unpack((allDiscovered and discoveredColor) or undiscoveredColor))
+			end
+		end
+		topRow, currentRow = currentRow, topRow
+	end
+end
+
+function TileDisplay:FillTableWithNumDiscoveriesInRow(tbl, y)
+	local discoveryData = self.discoveryData
+	local radius = self.radius
+	local AnyDiscoveredInVerticalLine = discoveryData.AnyDiscoveredInVerticalLine
+	tbl[-1] = 0
+	for x = 0, radius-1 do
+		tbl[-1] = tbl[-1] + AnyDiscoveredInVerticalLine(discoveryData, x, y, radius)
+	end
+	for x = 0, self.total_units - 1 do 
+		tbl[x] = tbl[x-1] - AnyDiscoveredInVerticalLine(discoveryData, x-1-radius, y, radius) + AnyDiscoveredInVerticalLine(discoveryData, x+radius, y, radius)
 	end
 end
 

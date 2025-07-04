@@ -33,20 +33,7 @@ function Menu:Initialize()
 	local lang = TrueExplor.lang
 	
 	local optionsTable = setmetatable({}, { __index = table })
-	--[[
-	optionsTable:insert({
-		type = "checkbox",
-		name = lang.retroactive,
-		tooltip = lang.retroactiveDec,
-		getFunc = function() return TrueExplor.settings.retroactive end,
-		setFunc = function(value)
-			TrueExplor.settings.retroactive = value
-			TrueExplor:Refresh()
-		end,
-		width = "half",	--or "half" (optional)
-		default = true,
-	})
-	]]--
+	
 	optionsTable:insert({
 			type = "description",
 		title = lang.chatCommands,
@@ -68,11 +55,11 @@ function Menu:Initialize()
 			name = lang[mapType .. "Radius"],
 			tooltip = lang[mapType .. "RadiusDesc"],
 			min = 1,
-			max = 16,
+			max = 6,
 			step = 1,
-			getFunc = function() return TrueExplor.settings.radiusForMapSize[size] end,
+			getFunc = function() return TrueExplor.settings.radiusForMapSize[size]+1 end,
 			setFunc = function(value)
-				TrueExplor.settings.radiusForMapSize[size] = value
+				TrueExplor.settings.radiusForMapSize[size] = value-1
 				TrueExplor:Refresh()
 			end,
 			width = "half",
@@ -140,13 +127,32 @@ function Menu:Initialize()
 		getFunc = function() return zo_round(TrueExplor.settings.undiscoveredColor[4] * 255) end,
 		setFunc = function(value) 
 			TrueExplor.settings.undiscoveredColor[4] = value / 255
-			TruExplor:MarkForRefresh()
+			TrueExplor:MarkForRefresh()
 		end,
 		width = "half",
 		default = 255,
 	})
-
-	if not IsConsoleUI() then
+	
+	optionsTable:insert({
+		type = "header",
+		name = lang.init,
+		width = "full",	--or "half" (optional)
+	})
+	
+	optionsTable:insert({
+		type = "checkbox",
+		name = lang.retroactive,
+		tooltip = lang.retroactiveDec,
+		getFunc = function() return TrueExplor.settings.retroactive end,
+		setFunc = function(value)
+			TrueExplor.settings.retroactive = value
+			TrueExplor:Refresh()
+		end,
+		width = "half",	--or "half" (optional)
+		default = TrueExplor.defaultSettings.retroactive,
+	})
+	
+	if false then --not IsConsoleUI() then
 		LibAddonMenu2:RegisterAddonPanel("TrueExplorationOptions", panelData)
 		LibAddonMenu2:RegisterOptionControls("TrueExplorationOptions", optionsTable)
 	else
@@ -164,6 +170,14 @@ function Menu:Initialize()
 			checkbox = LibHarvensAddonSettings.ST_CHECKBOX,
 		}
 		
+		--[[
+		settings:AddSetting({
+			type = LibHarvensAddonSettings.ST_LABEL,
+			label = lang.noknowledge,
+			tooltip = lang.noknowledgeDesc,
+			canSelect = true,
+		})
+		]]--
 		for i, entry in ipairs(optionsTable) do
 			local newType = LAMtoHAS[entry.type]
 			if newType then
@@ -181,5 +195,19 @@ function Menu:Initialize()
 				settings:AddSetting(newOption)
 			end
 		end
+		--[[
+		settings:AddSetting({
+			type = LibHarvensAddonSettings.ST_LABEL,
+			label = lang.guide,
+			canSelect = true,
+		})
+		]]--
+		settings:AddSetting({
+			type = LibHarvensAddonSettings.ST_LABEL,
+			label = lang.resetLabel,
+			canSelect = true,
+		})
+		
+		
 	end
 end

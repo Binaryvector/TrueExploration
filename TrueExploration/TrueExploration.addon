@@ -1,11 +1,10 @@
-## Title: TrueExploration
+## Title: True Exploration
 ## APIVersion: 101046
 ## Version: 1.11
 ## AddOnVersion: 111
 ## Author: Shinni
 ## SavedVariables: TE_SavedVars
 ## ConsoleDependsOn: LibHarvensAddonSettings
-## PCDependsOn: LibAddonMenu-2.0
 ## OptionalDependsOn: AUI LibDebugLogger
 
 language/en.lua

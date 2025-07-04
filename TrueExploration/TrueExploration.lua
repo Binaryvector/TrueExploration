@@ -14,7 +14,7 @@ TrueExplor.defaultSettings = {
 		[MAPTYPE_WORLD] = true,
 	},
 	radiusForMapSize = {
-		[768] = 3, --dungeon
+		[768] = 2, --dungeon
 		[1280] = 2, --city
 		[1536] = 1, --starter island, larger cities
 		[2048] = 0, --zones
@@ -61,26 +61,28 @@ end
 
 function TrueExplor:MarkForRefresh()
 	self.needUpdate = true
+	EVENT_MANAGER:RegisterForUpdate("TrueExploration-Delay", 0, self.delay)
 end
 
-function TrueExplor:Refresh()
+function TrueExplor:Refresh(skipIfSameData)
 	if self:IsCurrentMapSkipped() then
 		self.tileDisplay:HideTiles()
 		return
 	end
 	if not (ZO_WorldMapContainer1 and ZO_WorldMapContainer1:IsTextureLoaded()) then
 		self:MarkForRefresh()
-		EVENT_MANAGER:RegisterForUpdate("TrueExploration-Delay", 0, self.delay)
 		return
 	end
 	self:RefreshRadius()
+	self.needUpdate = false
 	local mapId = GetCurrentMapId()
-	
 	local discoveryData = self:GetDiscoveryDataForMapId(mapId)
 	assert(discoveryData)
+	if skipIfSameData and (discoveryData == self.tileDisplay.discoveryData) then
+		return
+	end
 	self.tileDisplay:SetDiscoveryData(discoveryData)
 	self.tileDisplay:Refresh()
-	self.needUpdate = false
 end
 TrueExplor.delay = function() 
 	if ZO_WorldMapContainer1 and ZO_WorldMapContainer1:IsTextureLoaded() then 
@@ -233,11 +235,12 @@ function TrueExplor:Initialize()
 	self.tileDisplay:Initialize(ZO_WorldMapContainer, 0)--self.settings.radius)
 	self.tileDisplay:SetColors(self.settings.discoveredColor, self.settings.undiscoveredColor)
 	-- add debug chat commands
-	SLASH_COMMANDS["/tedebug"] = function(s) TrueExplor:SetDebugEnabled(tonumber(s)==1) end
-	SLASH_COMMANDS["/discover"] = function() TrueExplor:SetCompletelyDiscoverForCurrentMap(true) end
-	SLASH_COMMANDS["/undiscover"] = function() TrueExplor:SetCompletelyDiscoverForCurrentMap(false) end
-	SLASH_COMMANDS["/clearmap"] = function() TrueExplor:ClearDataForCurrentMap() end
-	
+	if not IsConsoleUI() then
+		SLASH_COMMANDS["/tedebug"] = function(s) TrueExplor:SetDebugEnabled(tonumber(s)==1) end
+		SLASH_COMMANDS["/discover"] = function() TrueExplor:SetCompletelyDiscoverForCurrentMap(true) end
+		SLASH_COMMANDS["/undiscover"] = function() TrueExplor:SetCompletelyDiscoverForCurrentMap(false) end
+		SLASH_COMMANDS["/clearmap"] = function() TrueExplor:ClearDataForCurrentMap() end
+	end
 	--if true then return end
 	-- update the MapTile objects, when a new map is displayed
 	CALLBACK_MANAGER:RegisterCallback("OnWorldMapChanged", function() self:Refresh() end)
@@ -252,11 +255,9 @@ function TrueExplor:Initialize()
 			if AUI_MapContainer then
 				self.tileDisplay:SetContainer(ZO_WorldMapContainer)
 			end
-			self.tileDisplay:Refresh()
 		elseif newState == SCENE_HIDING then
 			if AUI_MapContainer then
 				self.tileDisplay:SetContainer(AUI_MapContainer)
-				self.tileDisplay:Refresh()
 			end
 			self:SetDebugEnabled(false)
 		end
@@ -267,16 +268,15 @@ function TrueExplor:Initialize()
 	mapscene:RegisterCallback("StateChange", callback)
 	
 	EVENT_MANAGER:RegisterForUpdate("TrueExploration", UPDATE_DELAY_IN_MS, function()
-		if TrueExplor.needUpdate then
-			TrueExplor:Refresh()
-		end
-		
 		if ZO_WorldMap_IsWorldMapShowing() then return end
 		
 		TrueExplor:DiscoverCurrentLocation()
 	end)
 	
-	CALLBACK_MANAGER:RegisterCallback("OnWorldMapChanged", function() self:Refresh() end)
+	CALLBACK_MANAGER:RegisterCallback("OnWorldMapChanged", function()
+		local skipIfSameData = true
+		self:Refresh(skipIfSameData)
+	end)
 	
 	-- add zoom function for the tiles. when the map is zoomed into, the tiles need to scale as well
 	local oldDimensions = ZO_WorldMapContainer.SetDimensions
@@ -294,6 +294,57 @@ function TrueExplor:Initialize()
 			end
 		end)
 	end
+	
+	if not self.settings.initialized then
+		local lang = self.lang
+		ESO_Dialogs["INIT_EXPLORATION"] =
+		{
+			canQueue = true,
+			gamepadInfo =
+			{
+				dialogType = GAMEPAD_DIALOGS.BASIC,
+			},
+			title =
+			{
+				text = lang.initTitle,
+			},
+			mainText =
+			{
+				text = lang.initBody,
+			},
+			buttons =
+			{
+				[1] =
+				{
+					text = lang.empty,
+					callback = function(dialog)
+						TrueExplor.settings.initialized = true
+						TrueExplor.settings.retroactive = false
+						ZO_ClearTable(self.loadedData)
+						ZO_ClearTable(self.maps)
+						self:Refresh()
+					end,
+				},
+				[2] =
+				{
+					text = lang.guessExploration,
+					callback = function(dialog)
+						TrueExplor.settings.initialized = true
+						TrueExplor.settings.retroactive = true
+						local nonEmpty = true
+						ZO_ClearTable(self.loadedData)
+						ZO_ClearTable(self.maps)
+						self:Refresh()
+					end,
+				},
+			}
+		}
+		EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_PLAYER_ACTIVATED, function() 
+			EVENT_MANAGER:UnregisterForEvent("TrueExploration", EVENT_PLAYER_ACTIVATED) 
+			ZO_Dialogs_ShowPlatformDialog("INIT_EXPLORATION", {}) 
+		end)
+	end
+	
 end
 
 EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_ADD_ON_LOADED, function(_, addon)

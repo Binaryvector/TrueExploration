@@ -3,8 +3,13 @@ local DiscoveryData = ZO_Object:Subclass()
 TrueExplor = TrueExplor or {}
 TrueExplor.discoveryData = DiscoveryData
 
+local NUM_UNITS = TrueExplor.total_units
+local UNITS_PER_NUMBER = TrueExplor.unitsPerNumber
 local BITS = 7
 
+local zo_floor = zo_floor
+local zo_min = zo_min
+local zo_max = zo_max
 
 function DiscoveryData:Load(data)
 	setmetatable(data, self)
@@ -31,7 +36,7 @@ DiscoveryData.validPinTypes = {
 function DiscoveryData:Initialize(mapId)
 	local currentMapId = GetCurrentMapId()
 	SetMapToMapId(mapId)
-	local units = TrueExplor.total_units
+	local units = NUM_UNITS
 	local zoneIndex = GetCurrentMapZoneIndex()
 	local numPOI = GetNumPOIs(zoneIndex)
 	local POIsX = {}
@@ -85,13 +90,15 @@ function DiscoveryData:UndiscoverInRadius(x, y, radius)
 	
 	local unit
 	local num, bit
+	local units = NUM_UNITS
+	local unitsPerNumber = UNITS_PER_NUMBER
 	for i = x - radius, x + radius do
 		for j = y - radius, y + radius do
 			if self:IsDiscovered(i, j) then
 				hasChanged = true
-				unit = i + j * TrueExplor.total_units
-				num = zo_floor(unit / TrueExplor.unitsPerNumber)
-				bit = zo_mod(unit, TrueExplor.unitsPerNumber)
+				unit = i + j * units
+				num = zo_floor(unit / unitsPerNumber)
+				bit = unit % unitsPerNumber
 				self[num] = self[num] - (2^bit)
 			end
 		end
@@ -104,9 +111,9 @@ function DiscoveryData:Discover(x, y)
 	
 	if not self:IsDiscovered(x, y) then
 		hasChanged = true
-		local unitId = (y * TrueExplor.total_units + x)
-		local num = zo_floor(unitId / TrueExplor.unitsPerNumber)
-		local bit = zo_mod(unitId, TrueExplor.unitsPerNumber)
+		local unitId = (y * NUM_UNITS + x)
+		local num = zo_floor(unitId / UNITS_PER_NUMBER)
+		local bit = unitId % UNITS_PER_NUMBER
 		self[num] = (self[num] or 0) + (2^bit)
 	end
 	return hasChanged
@@ -114,21 +121,47 @@ end
 
 function DiscoveryData:IsDiscovered(x, y)
 	if self.discovered then return true end
-	local unit = x + y * TrueExplor.total_units
-	local i = zo_floor(unit / TrueExplor.unitsPerNumber)
-	local j = zo_mod(unit, TrueExplor.unitsPerNumber)
-	local save = self[i]
+	if x < 0 or x > NUM_UNITS or y < 0 or y > NUM_UNITS then return false end
+	local unit = x + y * NUM_UNITS
+	local num = zo_floor(unit / UNITS_PER_NUMBER)
+	local bit = unit % UNITS_PER_NUMBER
+	local save = self[num]
 	if save then
-		return ((save / (2^j)) % 2 >= 1)
+		return ((save / (2^bit)) % 2 >= 1)
 	end
 	return false
 end
 
+function DiscoveryData:AnyDiscoveredInVerticalLine(x, y, length)
+	local numUnits = NUM_UNITS
+	if x > numUnits or x < 0 then return 0 end
+	local unit, num, bit, save
+	local unitsPerNumber = UNITS_PER_NUMBER
+	for j = zo_max(0, y - length), zo_min(y + length, numUnits-1) do
+		unit = x + j * numUnits
+		num = zo_floor(unit / unitsPerNumber)
+		bit = unit % unitsPerNumber
+		save = self[num]
+		if save and ((save / (2^bit)) % 2 >= 1) then
+			return 1
+		end
+	end
+	return 0
+end
+
 function DiscoveryData:IsAnyDiscoveredInRadius(x, y, radius)
 	local num, bit
-	for i = x - radius, x + radius do
-		for j = y - radius, y + radius do
-			if self:IsDiscovered(i, j) then
+	local numUnits = NUM_UNITS
+	local unitsPerNumber = UNITS_PER_NUMBER
+	local startX = zo_max(0,x - radius)
+	local endX = zo_min(x + radius, numUnits)
+	for j = zo_max(0, y - radius), zo_min(y + radius, numUnits) do
+		for i = startX, endX do
+			unit = i + j * numUnits
+			num = zo_floor(unit / unitsPerNumber)
+			bit = unit % unitsPerNumber
+			save = self[num]
+			if save and ((save / (2^bit)) % 2 >= 1) then
 				return true
 			end
 		end
