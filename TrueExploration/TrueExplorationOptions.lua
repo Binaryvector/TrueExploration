@@ -35,12 +35,6 @@ function Menu:Initialize()
 	local optionsTable = setmetatable({}, { __index = table })
 	
 	optionsTable:insert({
-			type = "description",
-		title = lang.chatCommands,
-		text = lang.chatCommandsDesc,
-		width = "full"
-	})
-	optionsTable:insert({
 		type = "header",
 		name = lang.radiusSetting,
 		width = "full",	--or "half" (optional)
@@ -55,7 +49,7 @@ function Menu:Initialize()
 			name = lang[mapType .. "Radius"],
 			tooltip = lang[mapType .. "RadiusDesc"],
 			min = 1,
-			max = 6,
+			max = 7,
 			step = 1,
 			getFunc = function() return TrueExplor.settings.radiusForMapSize[size]+1 end,
 			setFunc = function(value)
@@ -85,6 +79,7 @@ function Menu:Initialize()
 		width = "half",	--or "half" (optional)
 		default = true,
 	})
+	
 	optionsTable:insert({
 		type = "checkbox",
 		name = lang.subzone,
@@ -117,6 +112,7 @@ function Menu:Initialize()
 		width = "half",
 		default = 0,
 	})
+	
 	optionsTable:insert({
 		type = "slider",
 		name = lang.undiscovered,
@@ -152,6 +148,13 @@ function Menu:Initialize()
 		default = TrueExplor.defaultSettings.retroactive,
 	})
 	
+	optionsTable:insert({
+		type = "description",
+		title = nil,
+		text = lang.resetLabel,
+		width = "full"
+	})
+	
 	if false then --not IsConsoleUI() then
 		LibAddonMenu2:RegisterAddonPanel("TrueExplorationOptions", panelData)
 		LibAddonMenu2:RegisterOptionControls("TrueExplorationOptions", optionsTable)
@@ -168,22 +171,15 @@ function Menu:Initialize()
 			slider = LibHarvensAddonSettings.ST_SLIDER,
 			header = LibHarvensAddonSettings.ST_SECTION,
 			checkbox = LibHarvensAddonSettings.ST_CHECKBOX,
+			description = LibHarvensAddonSettings.ST_LABEL
 		}
 		
-		--[[
-		settings:AddSetting({
-			type = LibHarvensAddonSettings.ST_LABEL,
-			label = lang.noknowledge,
-			tooltip = lang.noknowledgeDesc,
-			canSelect = true,
-		})
-		]]--
 		for i, entry in ipairs(optionsTable) do
 			local newType = LAMtoHAS[entry.type]
 			if newType then
 				local newOption = {
 					type = newType,
-					label = entry.name,
+					label = entry.name or entry.text,
 					default = entry.default,
 					setFunction = entry.setFunc,
 					getFunction = entry.getFunc,
@@ -191,23 +187,11 @@ function Menu:Initialize()
 					min = entry.min,
 					max = entry.max,
 					step = entry.step,
+					canSelect = true,
 				}
 				settings:AddSetting(newOption)
 			end
 		end
-		--[[
-		settings:AddSetting({
-			type = LibHarvensAddonSettings.ST_LABEL,
-			label = lang.guide,
-			canSelect = true,
-		})
-		]]--
-		settings:AddSetting({
-			type = LibHarvensAddonSettings.ST_LABEL,
-			label = lang.resetLabel,
-			canSelect = true,
-		})
-		
 		
 	end
 end

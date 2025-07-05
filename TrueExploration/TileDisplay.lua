@@ -5,6 +5,7 @@ TrueExplor.tileDisplay = TileDisplay
 
 local TrueExplor = TrueExplor
 local zo_floor = zo_floor
+local PI = math.pi
 
 function TileDisplay:Initialize(container, radius)
 	self.total_units = TrueExplor.total_units
@@ -66,7 +67,7 @@ function TileDisplay:GetControl(x, y)
 	local width, height = self.hideAllControl:GetDimensions()
 	local controlWidth = width / self.total_units
 	local controlHeight = height / self.total_units
-	control:SetAnchor(TOPLEFT, container, TOPLEFT, (x-0.5) * controlWidth, (y-0.5) * controlHeight)
+	control:SetAnchor(CENTER, container, TOPLEFT, x * controlWidth, y * controlHeight)
 	control:SetDimensions(controlWidth, controlHeight)
 	control:SetHidden(false)
 	self.controls[unit] = control
@@ -106,7 +107,7 @@ function TileDisplay:UpdateSize(width, height)
 	for index, control in pairs(self.controls) do
 		x = index % self.total_units
 		y = zo_floor(index / self.total_units)
-		control:SetAnchor(TOPLEFT, container, TOPLEFT, (x-0.5) * controlWidth, (y-0.5) * controlHeight)
+		control:SetAnchor(CENTER, container, TOPLEFT, x * controlWidth, y * controlHeight)
 		control:SetDimensions(controlWidth, controlHeight)
 	end
 	local index = 0
@@ -261,29 +262,50 @@ end
 function TileDisplay:FillTableWithNumDiscoveriesInRow(tbl, y)
 	local discoveryData = self.discoveryData
 	local radius = self.radius
-	local AnyDiscoveredInVerticalLine = discoveryData.AnyDiscoveredInVerticalLine
-	tbl[-1] = 0
-	for x = 0, radius-1 do
-		tbl[-1] = tbl[-1] + AnyDiscoveredInVerticalLine(discoveryData, x, y, radius)
-	end
-	for x = 0, self.total_units - 1 do 
-		tbl[x] = tbl[x-1] - AnyDiscoveredInVerticalLine(discoveryData, x-1-radius, y, radius) + AnyDiscoveredInVerticalLine(discoveryData, x+radius, y, radius)
+	if radius > 1 then
+		radius = radius - 1
+		local AnyDiscoveredInVerticalLine = discoveryData.AnyDiscoveredInVerticalLine
+		tbl[-1] = 0
+		for x = 0, radius-1 do
+			tbl[-1] = tbl[-1] + AnyDiscoveredInVerticalLine(discoveryData, x, y, radius)
+		end
+		for x = 0, self.total_units - 1 do 
+			tbl[x] = tbl[x-1] - AnyDiscoveredInVerticalLine(discoveryData, x-1-radius, y, radius) + AnyDiscoveredInVerticalLine(discoveryData, x+radius, y, radius)
+		end
+	else
+		local IsAnyDiscoveredInRadius = discoveryData.IsAnyDiscoveredInRadius
+		for x = -1, self.total_units - 1 do 
+			tbl[x] = IsAnyDiscoveredInRadius(discoveryData, x, y, radius) and 1 or 0
+		end
 	end
 end
 
 function TileDisplay:RefreshControlForDiscoveryStatus(control, center, left, top, topleft)
 	local discoveredColor = self.discoveredColor
 	local hiddenColor = self.undiscoveredColor
-	
-	control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT, --1, 0, 0, 1)
-		unpack(center and discoveredColor or hiddenColor))
-	-- color of the tile's neigbors for gradient effect
-	control:SetVertexColors(VERTEX_POINTS_BOTTOMLEFT,
-		unpack(left and discoveredColor or hiddenColor))
-	control:SetVertexColors(VERTEX_POINTS_TOPRIGHT,
-		unpack(top and discoveredColor or hiddenColor))
-	control:SetVertexColors(VERTEX_POINTS_TOPLEFT,
-		unpack(topleft and discoveredColor or hiddenColor))
+	if (left and not top) or (top and not left) or (center and topleft) then
+		control:SetTextureRotation(PI/2)
+		control:SetVertexColors(VERTEX_POINTS_BOTTOMLEFT,--VERTEX_POINTS_BOTTOMRIGHT, --1, 0, 0, 1)
+			unpack(center and discoveredColor or hiddenColor))
+		-- color of the tile's neigbors for gradient effect
+		control:SetVertexColors(VERTEX_POINTS_TOPLEFT,--VERTEX_POINTS_BOTTOMLEFT,
+			unpack(left and discoveredColor or hiddenColor))
+		control:SetVertexColors(VERTEX_POINTS_TOPRIGHT,--VERTEX_POINTS_TOPRIGHT,
+			unpack(topleft and discoveredColor or hiddenColor))
+		control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT,--VERTEX_POINTS_TOPLEFT,
+			unpack(top and discoveredColor or hiddenColor))
+	else
+		control:SetTextureRotation(0)
+		control:SetVertexColors(VERTEX_POINTS_BOTTOMRIGHT, --1, 0, 0, 1)
+			unpack(center and discoveredColor or hiddenColor))
+		-- color of the tile's neigbors for gradient effect
+		control:SetVertexColors(VERTEX_POINTS_BOTTOMLEFT,
+			unpack(left and discoveredColor or hiddenColor))
+		control:SetVertexColors(VERTEX_POINTS_TOPLEFT,
+			unpack(topleft and discoveredColor or hiddenColor))
+		control:SetVertexColors(VERTEX_POINTS_TOPRIGHT,
+			unpack(top and discoveredColor or hiddenColor))
+	end
 end
 
 function TileDisplay:SetColors(discoveredColor, undiscoveredColor)

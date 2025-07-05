@@ -14,10 +14,10 @@ TrueExplor.defaultSettings = {
 		[MAPTYPE_WORLD] = true,
 	},
 	radiusForMapSize = {
-		[768] = 2, --dungeon
-		[1280] = 2, --city
-		[1536] = 1, --starter island, larger cities
-		[2048] = 0, --zones
+		[768] = 4, --dungeon
+		[1280] = 4, --city
+		[1536] = 2, --starter island, larger cities
+		[2048] = 1, --zones
 		[5120] = 0,--96, -- cyrodiil (more than 50 panels will result in too much lag)
 	}
 }
@@ -221,6 +221,10 @@ end
 
 function TrueExplor:Initialize()
 	-- load save files
+	self.isFirstStartUp = false
+	if not TE_SavedVars then
+		self.isFirstStartUp = true
+	end
 	self.save = ZO_SavedVars:New("TE_SavedVars", 1, "save", { maps = {} })
 	self.maps = self.save.maps
 	self.settings = ZO_SavedVars:New("TE_SavedVars", 1, "save", self.defaultSettings)
@@ -295,7 +299,7 @@ function TrueExplor:Initialize()
 		end)
 	end
 	
-	if not self.settings.initialized then
+	if self.isFirstStartUp then
 		local lang = self.lang
 		ESO_Dialogs["INIT_EXPLORATION"] =
 		{
@@ -318,7 +322,6 @@ function TrueExplor:Initialize()
 				{
 					text = lang.empty,
 					callback = function(dialog)
-						TrueExplor.settings.initialized = true
 						TrueExplor.settings.retroactive = false
 						ZO_ClearTable(self.loadedData)
 						ZO_ClearTable(self.maps)
@@ -329,7 +332,6 @@ function TrueExplor:Initialize()
 				{
 					text = lang.guessExploration,
 					callback = function(dialog)
-						TrueExplor.settings.initialized = true
 						TrueExplor.settings.retroactive = true
 						local nonEmpty = true
 						ZO_ClearTable(self.loadedData)

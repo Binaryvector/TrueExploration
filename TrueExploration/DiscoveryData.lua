@@ -153,6 +153,47 @@ function DiscoveryData:IsAnyDiscoveredInRadius(x, y, radius)
 	local num, bit
 	local numUnits = NUM_UNITS
 	local unitsPerNumber = UNITS_PER_NUMBER
+	if radius == 1 then
+		unit = x + y * numUnits
+		num = zo_floor(unit / unitsPerNumber)
+		bit = unit % unitsPerNumber
+		save = self[num]
+		if save and ((save / (2^bit)) % 2 >= 1) then
+			return true
+		end
+		unit = (x-1) + y * numUnits
+		num = zo_floor(unit / unitsPerNumber)
+		bit = unit % unitsPerNumber
+		save = self[num]
+		if save and ((save / (2^bit)) % 2 >= 1) then
+			return true
+		end
+		unit = (x+1) + y * numUnits
+		num = zo_floor(unit / unitsPerNumber)
+		bit = unit % unitsPerNumber
+		save = self[num]
+		if save and ((save / (2^bit)) % 2 >= 1) then
+			return true
+		end
+		unit = x + (y-1) * numUnits
+		num = zo_floor(unit / unitsPerNumber)
+		bit = unit % unitsPerNumber
+		save = self[num]
+		if save and ((save / (2^bit)) % 2 >= 1) then
+			return true
+		end
+		unit = x + (y+1) * numUnits
+		num = zo_floor(unit / unitsPerNumber)
+		bit = unit % unitsPerNumber
+		save = self[num]
+		if save and ((save / (2^bit)) % 2 >= 1) then
+			return true
+		end
+		return false
+	end
+	if radius > 1 then
+		radius = radius - 1
+	end
 	local startX = zo_max(0,x - radius)
 	local endX = zo_min(x + radius, numUnits)
 	for j = zo_max(0, y - radius), zo_min(y + radius, numUnits) do
