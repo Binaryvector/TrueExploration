@@ -304,6 +304,7 @@ function TrueExplor:Initialize()
 		ESO_Dialogs["INIT_EXPLORATION"] =
 		{
 			canQueue = true,
+			mustChoose = true,
 			gamepadInfo =
 			{
 				dialogType = GAMEPAD_DIALOGS.BASIC,
