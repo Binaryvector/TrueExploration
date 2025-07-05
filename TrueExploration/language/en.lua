@@ -19,6 +19,7 @@ local language = {
 	
 	init = "Initialization",
 	initBody = "The 'True Exploration' Add-On cannot know which areas you explored before the Add-On was installed.\nYou have two options how to initialize the addon:\nA) Completely hide all maps until you explore them again.\nB) Let the Add-On guess which areas you explored already by using your completed point of interests (quests, skyshards, wayshrines, etc.)",
+	guessExploration = "Guess exploration",
 	
 	-- settings menu
 	radiusSetting = "Radius Settings",
