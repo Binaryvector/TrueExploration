@@ -219,6 +219,31 @@ function TrueExplor:IsDebugEnabled(isEnabled)
 	return self.isDebugEnabled
 end
 
+function TrueExplor:AddCustomDialog(tag, dialog)
+	local buttons = dialog.buttons
+	dialog.buttons = nil
+	dialog.OnShownCallback = function(dialog)
+		local g_keybindState = KEYBIND_STRIP:GetTopKeybindStateIndex()
+		local g_keybindGroupDesc = {
+			{
+				alignment = KEYBIND_STRIP_ALIGN_LEFT,
+				name = buttons[1].text or buttons[1].name,
+				keybind = "DIALOG_PRIMARY",
+				order = -500,
+				callback = buttons[1].callback,
+			},
+			{
+				alignment = KEYBIND_STRIP_ALIGN_LEFT,
+				name = buttons[2].text or buttons[2].name,
+				keybind = "DIALOG_NEGATIVE",
+				callback = buttons[2].callback,
+			}
+		}
+		KEYBIND_STRIP:AddKeybindButtonGroup(g_keybindGroupDesc, g_keybindState)
+	end
+	ESO_Dialogs[tag] = dialog
+end
+
 function TrueExplor:Initialize()
 	-- load save files
 	self.isFirstStartUp = false
@@ -259,6 +284,7 @@ function TrueExplor:Initialize()
 			if AUI_MapContainer then
 				self.tileDisplay:SetContainer(ZO_WorldMapContainer)
 			end
+			self.tileDisplay:Refresh()
 		elseif newState == SCENE_HIDING then
 			if AUI_MapContainer then
 				self.tileDisplay:SetContainer(AUI_MapContainer)
@@ -301,25 +327,13 @@ function TrueExplor:Initialize()
 	
 	if self.isFirstStartUp then
 		local lang = self.lang
-		ESO_Dialogs["INIT_EXPLORATION"] =
-		{
+		self:AddCustomDialog("INIT_EXPLORATION", {
 			canQueue = true,
 			mustChoose = true,
-			gamepadInfo =
-			{
-				dialogType = GAMEPAD_DIALOGS.BASIC,
-			},
-			title =
-			{
-				text = lang.initTitle,
-			},
-			mainText =
-			{
-				text = lang.initBody,
-			},
-			buttons =
-			{
-				[1] =
+			gamepadInfo = {dialogType = GAMEPAD_DIALOGS.BASIC},
+			title = {text = lang.initTitle}, 
+			mainText = {text = lang.initBody},
+			buttons = {
 				{
 					text = lang.empty,
 					callback = function(dialog)
@@ -329,7 +343,6 @@ function TrueExplor:Initialize()
 						self:Refresh()
 					end,
 				},
-				[2] =
 				{
 					text = lang.guessExploration,
 					callback = function(dialog)
@@ -340,8 +353,8 @@ function TrueExplor:Initialize()
 						self:Refresh()
 					end,
 				},
-			}
-		}
+			},
+		})
 		EVENT_MANAGER:RegisterForEvent("TrueExploration", EVENT_PLAYER_ACTIVATED, function() 
 			EVENT_MANAGER:UnregisterForEvent("TrueExploration", EVENT_PLAYER_ACTIVATED) 
 			ZO_Dialogs_ShowPlatformDialog("INIT_EXPLORATION", {}) 

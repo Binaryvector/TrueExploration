@@ -1,10 +1,10 @@
 ## Title: True Exploration
 ## APIVersion: 101046
-## Version: 2.0
-## AddOnVersion: 200
+## Version: 2.2
+## AddOnVersion: 202
 ## Author: Shinni
 ## SavedVariables: TE_SavedVars
-## ConsoleDependsOn: LibHarvensAddonSettings
+## ConsoleDependsOn: LibHarvensAddonSettings LibConsoleDialogs
 ## OptionalDependsOn: AUI LibDebugLogger
 
 language/en.lua

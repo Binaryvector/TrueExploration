@@ -6,71 +6,45 @@ TrueExplor.filterMenu = FilterMenu
 function FilterMenu:Initialize()
 	local lang = TrueExplor.lang
 	
-	ESO_Dialogs["CLEAR_EXPLORATION"] =
-	{
-		gamepadInfo =
-		{
-			dialogType = GAMEPAD_DIALOGS.BASIC,
-		},
-		title =
-		{
-			text = lang.clearTitle,
-		},
-		mainText =
-		{
-			text = lang.clearBody,
-		},
-		buttons =
-		{
-			[1] =
-			{
-				text = SI_DIALOG_CONFIRM,
-				callback = function(dialog)
-					ZO_Dialogs_ShowPlatformDialog("FILLED_EXPLORATION", {})
-				end,
+	TrueExplor:AddCustomDialog("CLEAR_EXPLORATION", {
+			gamepadInfo = {dialogType = GAMEPAD_DIALOGS.BASIC},
+			title = {text = lang.clearTitle},
+			mainText = {text = lang.clearBody},
+			buttons = {
+				{
+					text = GetString(SI_DIALOG_CONFIRM),
+					callback = function(dialog)
+						ZO_Dialogs_ShowPlatformDialog("FILLED_EXPLORATION", {})
+					end,
+				},
+				{
+					text = GetString(SI_DIALOG_CANCEL),
+				},
 			},
-			[2] =
-			{
-				text = SI_DIALOG_CANCEL,
-			},
-		}
-	}
+		})
 	
-	ESO_Dialogs["FILLED_EXPLORATION"] =
-	{
-		canQueue = true,
-		gamepadInfo =
-		{
-			dialogType = GAMEPAD_DIALOGS.BASIC,
-		},
-		title =
-		{
-			text = lang.newMapTitle,
-		},
-		mainText =
-		{
-			text = lang.newMapBody,
-		},
-		buttons =
-		{
-			[1] =
-			{
-				text = lang.empty,
-				callback = function(dialog)
-					local empty = true
-					TrueExplor:ClearDataForCurrentMap(empty)
-				end,
+	TrueExplor:AddCustomDialog("FILLED_EXPLORATION", {
+			canQueue = true,
+			gamepadInfo = {dialogType = GAMEPAD_DIALOGS.BASIC},
+			title = {text = lang.newMapTitle},
+			mainText = {text = lang.newMapBody},
+			buttons = {
+				{
+					text = lang.empty,
+					callback = function(dialog)
+						local empty = true
+						TrueExplor:ClearDataForCurrentMap(empty)
+					end,
+				},
+				{
+					text = lang.filled,
+					callback = function(dialog)
+						local notEmpty = false
+						TrueExplor:ClearDataForCurrentMap(notEmpty)
+					end,
+				},
 			},
-			[2] =
-			{
-				text = lang.filled,
-				callback = function(dialog)
-					local notEmpty = false
-					TrueExplor:ClearDataForCurrentMap(notEmpty)
-				end,
-			},
-		}
-	}
+		})
 	
 	
 	local consolePanels = {
